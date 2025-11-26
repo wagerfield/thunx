@@ -1,6 +1,6 @@
 import { expect, test } from "vitest"
-import { x } from "./program"
+import { Program } from "./program"
 
-test("x is defined", () => {
-	expect(x).toBeDefined()
+test("Program is defined", () => {
+	expect(Program).toBeDefined()
 })

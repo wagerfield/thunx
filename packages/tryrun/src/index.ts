@@ -1,4 +1,6 @@
+import { Shell } from "./shell"
+
+export * from "./classes"
 export * from "./errors"
-export * from "./program"
-export * from "./result"
-export * from "./service"
+
+export const x = new Shell()

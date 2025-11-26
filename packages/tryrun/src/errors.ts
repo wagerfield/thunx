@@ -1,13 +1,6 @@
-// Named Error
+import { NamedError } from "./classes"
 
-export function NamedError<Name extends string>(name: Name) {
-	return class NamedError extends Error {
-		static override readonly name = name
-		public override readonly name = name
-	}
-}
-
-// Failed Error
+// Failed
 
 export class Failed extends NamedError("Failed") {}
 
@@ -15,7 +8,7 @@ export const fail = (): never => {
 	throw new Failed()
 }
 
-// Defect Error
+// Defect
 
 export class Defect extends NamedError("Defect") {}
 
