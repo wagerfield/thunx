@@ -1,0 +1,26 @@
+# Dependencies
+node_modules
+
+# Outputs
+coverage
+dist
+
+# Caches
+.vercel
+.turbo
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+*.log
+
+# Misc
+.DS_Store
+todo.md
+tmp

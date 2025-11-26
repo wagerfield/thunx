@@ -1,0 +1,15 @@
+# https://github.com/DavidAnson/markdownlint#rules--aliases
+
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/md010.md
+# MD010: Hard tabs
+MD010:
+  code_blocks: false
+  spaces_per_tab: 2
+
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/md013.md
+# MD013: Line length
+MD013: false
+
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/md046.md
+# MD046: Code block style
+MD046: false
