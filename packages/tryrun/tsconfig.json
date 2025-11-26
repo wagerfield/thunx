@@ -1,0 +1,5 @@
+{
+	"extends": "@tryrun/tsconfig/base.tsconfig.json",
+	"exclude": ["node_modules"],
+	"include": ["src"]
+}

@@ -1,0 +1,23 @@
+{
+	"private": true,
+	"type": "module",
+	"name": "tryrun",
+	"version": "0.1.0",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"default": "./dist/index.mjs"
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"dev": "tsdown --watch",
+		"type:check": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@tryrun/tsconfig": "workspace:*",
+		"@types/node": "24.10.0",
+		"tsdown": "0.16.1",
+		"typescript": "5.9.3"
+	}
+}
