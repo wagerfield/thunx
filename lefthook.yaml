@@ -1,0 +1,31 @@
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm commitlint --edit {1}
+
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "*.{html,md,mdx,yaml}"
+      run: pnpm prettier --write {staged_files}
+      stage_fixed: true
+    lint:
+      glob: "*.{css,js,jsx,json,ts,tsx}"
+      run: pnpm biome check --write {staged_files}
+      stage_fixed: true
+    test:
+      glob: "*.{js,jsx,ts,tsx}"
+      run: pnpm vitest related --run --passWithNoTests {staged_files}
+    typecheck:
+      run: pnpm run type:check
+
+pre-push:
+  parallel: true
+  commands:
+    test:
+      run: pnpm run test:run
+    lint:
+      run: pnpm run lint:write
+    build:
+      run: pnpm run build

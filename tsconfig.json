@@ -1,0 +1,3 @@
+{
+	"extends": "@tryrun/tsconfig/base.tsconfig.json"
+}
