@@ -41,8 +41,7 @@ export interface TokenConstructor<Key extends string> {
 
 export interface TokenClass {
 	readonly key: string
-	// biome-ignore lint/suspicious/noExplicitAny: Required for contravariant constructor parameter
-	new (shape: any): Tag<"Token", string>
+	new (shape: never): Tag<"Token", string>
 }
 
 export type TokenInstance<
@@ -50,8 +49,7 @@ export type TokenInstance<
 	Shape extends Record<string, unknown>,
 > = Tag<"Token", Key> & Readonly<Shape>
 
-// biome-ignore lint/suspicious/noExplicitAny: Required for contravariant constructor parameter
-export type TokenType<T> = T extends new (shape: any) => infer I ? I : never
+export type TokenType<T> = T extends new (shape: never) => infer I ? I : never
 
 export type TokenKey<I> = I extends Tag<"Token", infer Key> ? Key : never
 
