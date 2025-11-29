@@ -1,22 +1,37 @@
-import type { AnyService, RetryPolicy } from "./types"
+import type { TokenClass, TokenShape, TokenType } from "./token"
+import type { RetryPolicy } from "./types"
 
-export class Program<T = unknown, E = unknown, R = unknown> {
+/**
+ * A program that produces a value of type T, may fail with error E,
+ * and requires token implementations R to be provided before it can run.
+ *
+ * @typeParam T - Success value type
+ * @typeParam E - Failure error type
+ * @typeParam R - Union of required token types (must be `never` to run)
+ */
+export class Program<out T = unknown, out E = unknown, out R = never> {
 	private constructor() {}
 
-	// ───────────────────────────────────────────────────────────────────────────
-	// DEPENDENCY INJECTION
-	// ───────────────────────────────────────────────────────────────────────────
-
-	provide<S extends AnyService>(
-		_service: S,
-		_implementation: S,
-	): Program<T, E, Exclude<R, S>> {
-		throw new Error("Program.provide not implemented")
+	/**
+	 * Declare tokens that the program will require.
+	 * These must be provided before the program can be run.
+	 */
+	require<S extends TokenClass[]>(
+		..._tokens: S
+	): Program<T, E, R | TokenType<S[number]>> {
+		throw new Error("Program.require not implemented")
 	}
 
-	// ───────────────────────────────────────────────────────────────────────────
-	// TRANSFORMATION
-	// ───────────────────────────────────────────────────────────────────────────
+	/**
+	 * Provide an implementation for a required token.
+	 * Removes the token from the requirements.
+	 */
+	provide<S extends TokenClass>(
+		_token: S,
+		_shape: TokenShape<S>,
+	): Program<T, E, Exclude<R, TokenType<S>>> {
+		throw new Error("Program.provide not implemented")
+	}
 
 	map<U>(_fn: (value: T) => U): Program<U, E, R> {
 		throw new Error("Program.map not implemented")
@@ -38,10 +53,6 @@ export class Program<T = unknown, E = unknown, R = unknown> {
 		throw new Error("Program.catch not implemented")
 	}
 
-	// ───────────────────────────────────────────────────────────────────────────
-	// RECOVERY
-	// ───────────────────────────────────────────────────────────────────────────
-
 	retry(_policy: RetryPolicy | number): Program<T, E, R> {
 		throw new Error("Program.retry not implemented")
 	}
@@ -50,9 +61,9 @@ export class Program<T = unknown, E = unknown, R = unknown> {
 		throw new Error("Program.timeout not implemented")
 	}
 
-	orElse<U, F, R2 = never>(
-		_fn: (error: E) => Program<U, F, R2>,
-	): Program<T | U, F, R | R2> {
+	orElse<U, F, S>(
+		_fn: (error: E) => Program<U, F, S>,
+	): Program<T | U, F, R | S> {
 		throw new Error("Program.orElse not implemented")
 	}
 }
