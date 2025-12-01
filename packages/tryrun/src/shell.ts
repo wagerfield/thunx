@@ -1,7 +1,8 @@
-import type { ContextMap } from "./context"
+import type { Context } from "./context"
 import type { Program } from "./program"
+import type { Provider, TokenFactory } from "./provider"
 import type { Result } from "./result"
-import type { TokenClass, TokenKey, TokenShape, TokenType } from "./token"
+import type { TokenClass, TokenType } from "./token"
 import type {
 	ConcurrencyOptions,
 	ExtractProgramTupleErrors,
@@ -10,27 +11,30 @@ import type {
 	Middleware,
 	ProgramValuesTuple,
 	RunOptions,
+	UnwrapError,
+	UnwrapRequirements,
+	UnwrapValue,
 } from "./types"
 
 /**
- * The context object passed to program functions.
- * Provides type-safe access to tokens via the `get` method.
+ * Shell for declaring requirements and creating programs.
  *
- * @typeParam C - Union of token INSTANCE types available in context
- */
-export interface ProgramContext<C> {
-	signal: AbortSignal
-	get: <K extends TokenKey<C>>(key: K) => ContextMap<C>[K]
-}
-
-/**
- * Shell for building and running programs with dependency injection.
+ * @typeParam R - Union of token INSTANCE types required by programs created from this shell
  *
- * @typeParam C - Union of token INSTANCE types in context (both provided and required)
- * @typeParam R - Union of token INSTANCE types that still need to be provided (requirements)
+ * @example
+ * ```ts
+ * const shell = x.require(FooService, BarService)
+ * const prog = shell.try((ctx) => {
+ *   const foo = ctx.get(FooService)
+ *   return foo.value
+ * })
+ * ```
  */
-export class Shell<in out C = never, out R = never> {
-	use(_middleware: Middleware<C>): Shell<C, R> {
+export class Shell<R = never> {
+	/**
+	 * Add middleware to the shell.
+	 */
+	use(_middleware: Middleware<R>): Shell<R> {
 		throw new Error("Shell.use not implemented")
 	}
 
@@ -41,64 +45,73 @@ export class Shell<in out C = never, out R = never> {
 	 * @example
 	 * ```ts
 	 * const shell = x.require(FooService, BarService)
-	 * // shell: Shell<FooService | BarService, FooService | BarService>
+	 * // shell: Shell<FooService | BarService>
 	 * ```
 	 */
 	require<T extends TokenClass[]>(
 		..._tokens: T
-	): Shell<C | TokenType<T[number]>, R | TokenType<T[number]>> {
+	): Shell<R | TokenType<T[number]>> {
 		throw new Error("Shell.require not implemented")
 	}
 
 	/**
-	 * Provide an implementation for a token.
-	 * - If the token was required, it is removed from requirements.
-	 * - The token is added to the context regardless.
+	 * Create a Provider with an initial token.
+	 * Convenience method equivalent to `provider().provide(token, factory)`.
 	 *
 	 * @example
 	 * ```ts
-	 * // Just pass the shape - no need to construct instance manually:
-	 * const shell = x
-	 *   .require(FooService)
-	 *   .provide(FooService, { foo: "FOO" })
-	 * // shell: Shell<FooService, never>
+	 * const p = x.provide(FooService, { foo: "FOO" })
+	 * // p: Provider<FooService>
 	 *
-	 * // Providing an extra token (not required):
-	 * const shell = x
-	 *   .require(FooService)
-	 *   .provide(BarService, { bar: "BAR" })
-	 * // shell: Shell<FooService | BarService, FooService>
+	 * const p2 = p.provide(BarService, (ctx) => ({ bar: ctx.get(FooService).foo }))
+	 * // p2: Provider<FooService | BarService>
 	 * ```
 	 */
 	provide<T extends TokenClass>(
 		_token: T,
-		_shape: TokenShape<T>,
-	): Shell<C | TokenType<T>, Exclude<R, TokenType<T>>> {
+		_factory: TokenFactory<never, T>,
+	): Provider<TokenType<T>> {
 		throw new Error("Shell.provide not implemented")
 	}
 
 	/**
-	 * Create a program that can access tokens via the context.
+	 * Create a program that can access required tokens via context.
+	 * The callback can return a plain value, Promise, or another Program.
 	 *
 	 * @example
 	 * ```ts
+	 * // Return a value
+	 * const prog = shell.try((ctx) => ctx.get(FooService).value)
+	 *
+	 * // Return a Promise
+	 * const prog = shell.try((ctx) => fetchUser(ctx.get(Config).userId))
+	 *
+	 * // Return another Program (for composition)
 	 * const prog = shell.try((ctx) => {
-	 *   const { foo } = ctx.get("FooService")
-	 *   return { foo }
+	 *   if (ctx.get(Config).useCache) {
+	 *     return getCachedUser()  // Returns Program
+	 *   }
+	 *   return fetchUser()        // Returns Program
 	 * })
 	 * ```
 	 */
-	try<T, E = unknown, F = never>(
-		_fn: (context: ProgramContext<C>) => T | Promise<T> | Program<T, E, R>,
-		_catch?: (error: E) => F,
-	): Program<T, F, R> {
+	try<T, E = unknown>(
+		_fn: (context: Context<R>) => T,
+		_catch?: (error: unknown) => E,
+	): Program<UnwrapValue<T>, E | UnwrapError<T>, R | UnwrapRequirements<T>> {
 		throw new Error("Shell.try not implemented")
 	}
 
+	/**
+	 * Create a program that immediately fails with the given error.
+	 */
 	fail<E>(_error: E): Program<never, E, R> {
 		throw new Error("Shell.fail not implemented")
 	}
 
+	/**
+	 * Combine multiple programs, running them all and collecting results.
+	 */
 	all<T extends readonly Program[]>(
 		_programs: T,
 		_options?: ConcurrencyOptions,
@@ -110,6 +123,9 @@ export class Shell<in out C = never, out R = never> {
 		throw new Error("Shell.all not implemented")
 	}
 
+	/**
+	 * Run multiple programs, returning the first success.
+	 */
 	any<T extends readonly Program[]>(
 		_programs: T,
 	): Program<
@@ -120,6 +136,9 @@ export class Shell<in out C = never, out R = never> {
 		throw new Error("Shell.any not implemented")
 	}
 
+	/**
+	 * Run multiple programs, returning the first to complete.
+	 */
 	race<T extends readonly Program[]>(
 		_programs: T,
 	): Program<
@@ -130,6 +149,17 @@ export class Shell<in out C = never, out R = never> {
 		throw new Error("Shell.race not implemented")
 	}
 
+	/**
+	 * Run a program that has no outstanding requirements.
+	 *
+	 * @example
+	 * ```ts
+	 * const result = await x.run(program)
+	 * if (result.isSuccess()) {
+	 *   console.log(result.value)
+	 * }
+	 * ```
+	 */
 	run<T, E, Options extends RunOptions>(
 		_program: Program<T, E, never>,
 		_options?: Options,

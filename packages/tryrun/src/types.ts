@@ -24,6 +24,29 @@ export type RunOptions = {
 	mode?: RunMode
 }
 
+// Unwrap Utils (for unified map/try that accepts T | Promise<T> | Program<T, E, R>)
+
+/**
+ * Extract the success value from T | Promise<T> | Program<T, E, R>
+ */
+export type UnwrapValue<T> = T extends Program<infer U, unknown, unknown>
+	? U
+	: Awaited<T>
+
+/**
+ * Extract the error type from Program, or never for plain values/Promises
+ */
+export type UnwrapError<T> = T extends Program<unknown, infer E, unknown>
+	? E
+	: never
+
+/**
+ * Extract the requirements from Program, or never for plain values/Promises
+ */
+export type UnwrapRequirements<T> = T extends Program<unknown, unknown, infer R>
+	? R
+	: never
+
 // Program Type Utils
 
 export type ExtractProgramResult<P> = P extends Program<infer T, infer E>
