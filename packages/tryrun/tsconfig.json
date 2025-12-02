@@ -1,5 +1,34 @@
 {
-	"extends": "@tryrun/tsconfig/base.tsconfig.json",
-	"exclude": ["node_modules"],
-	"include": ["src"]
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"include": ["src"],
+	"compilerOptions": {
+		"lib": ["ESNext"],
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleDetection": "force",
+		"moduleResolution": "bundler",
+
+		"esModuleInterop": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+
+		"strict": true,
+		"noEmit": true,
+		"allowJs": true,
+		"skipLibCheck": true,
+
+		"useUnknownInCatchVariables": true,
+		"forceConsistentCasingInFileNames": true,
+		"noPropertyAccessFromIndexSignature": true,
+		"noFallthroughCasesInSwitch": true,
+
+		"noUncheckedIndexedAccess": true,
+		"noUnusedParameters": true,
+		"noUnusedLocals": true,
+
+		"noImplicitOverride": true,
+		"noImplicitReturns": true,
+		"noImplicitThis": true,
+		"noImplicitAny": true
+	}
 }

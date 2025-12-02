@@ -1,21 +1,51 @@
 {
-	"private": true,
-	"type": "module",
 	"name": "tryrun",
 	"version": "0.1.0",
+	"description": "Compose programs with errors and dependencies tracked at the type level. Zero runtime surprises.",
+	"homepage": "https://tryrun.vercel.app",
+	"license": "MIT",
+	"author": {
+		"name": "Matthew Wagerfield",
+		"email": "matthew@wagerfield.com",
+		"url": "https://matthew.wagerfield.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/wagerfield/tryrun.git",
+		"directory": "packages/tryrun"
+	},
+	"bugs": "https://github.com/wagerfield/tryrun/issues",
+	"keywords": [
+		"composable",
+		"type-safe",
+		"programs",
+		"promises",
+		"error-tracking",
+		"error-handling",
+		"dependency-injection",
+		"result"
+	],
+	"type": "module",
+	"sideEffects": false,
 	"exports": {
 		".": {
 			"types": "./dist/index.d.mts",
 			"default": "./dist/index.mjs"
 		}
 	},
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=18"
+	},
 	"scripts": {
 		"build": "tsdown",
 		"dev": "tsdown --watch",
-		"type:check": "tsc --noEmit"
+		"type:check": "tsc --noEmit",
+		"prepublishOnly": "pnpm run build"
 	},
 	"devDependencies": {
-		"@tryrun/tsconfig": "workspace:*",
 		"@types/node": "24.10.0",
 		"tsdown": "0.16.1",
 		"typescript": "5.9.3"
