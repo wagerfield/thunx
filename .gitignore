@@ -3,6 +3,7 @@ node_modules
 
 # Outputs
 coverage
+cache
 dist
 
 # Caches

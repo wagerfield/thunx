@@ -10,6 +10,7 @@
 		"esbenp.prettier-vscode",
 		"yoavbls.pretty-ts-errors",
 		"bradlc.vscode-tailwindcss",
-		"vitest.explorer"
+		"vitest.explorer",
+		"vue.volar"
 	]
 }
