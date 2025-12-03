@@ -4,6 +4,7 @@ import { defineConfig } from "vitepress"
 export default defineConfig({
 	title: "TryRun",
 	description: `Compose programs with errors and dependencies tracked at the type level.`,
+	outDir: "dist",
 	cleanUrls: true,
 
 	// https://vitepress.dev/reference/default-theme-config
