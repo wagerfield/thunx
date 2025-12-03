@@ -231,7 +231,7 @@ const race = x.race([fast, slow])
 | ---------------------- | -------- | --------- | -------- |
 | Typed errors           | ✅       | ❌        | ✅       |
 | Typed dependencies     | ✅       | ❌        | ✅       |
-| Bundle size            | ~2KB     | 0         | ~50KB+   |
+| Bundle size            | ~2KB     | 0         | ~25KB+   |
 | Learning curve         | Low      | None      | High     |
 | Async/await compatible | ✅       | ✅        | ✅       |
 
