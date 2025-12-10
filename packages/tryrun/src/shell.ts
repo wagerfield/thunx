@@ -152,8 +152,18 @@ export class Shell<R = never> {
 	}
 
 	/**
-	 * Combine multiple programs, running them all and collecting results.
-	 * Returns a tuple of values in the same order as the input programs.
+	 * Run multiple programs concurrently and collect all results.
+	 * Returns a `Program` with a tuple of values in input order.
+	 * Fails immediately if any program fails.
+	 *
+	 * @example
+	 * ```ts
+	 * const both = x.all([fetchUser(id), fetchPosts(id)])
+	 * // both: Program<[User, Post[]], FetchError, never>
+	 *
+	 * // With concurrency limit
+	 * const all = x.all(programs, { concurrency: 5 })
+	 * ```
 	 */
 	all<const T extends readonly Program[]>(
 		_programs: T,
@@ -167,7 +177,15 @@ export class Shell<R = never> {
 	}
 
 	/**
-	 * Run multiple programs, returning the first success.
+	 * Run multiple programs concurrently, returning the first success.
+	 * Returns a `Program` that succeeds when any program succeeds.
+	 * Fails only if all programs fail.
+	 *
+	 * @example
+	 * ```ts
+	 * const fastest = x.any([fetchFromCache(id), fetchFromDatabase(id)])
+	 * // fastest: Program<User, CacheError | DatabaseError, never>
+	 * ```
 	 */
 	any<const T extends readonly Program[]>(
 		_programs: T,
@@ -180,7 +198,15 @@ export class Shell<R = never> {
 	}
 
 	/**
-	 * Run multiple programs, returning the first to complete.
+	 * Run multiple programs concurrently, returning the first to complete.
+	 * Returns a `Program` with the result of whichever program finishes first.
+	 * The result can be a success or failure.
+	 *
+	 * @example
+	 * ```ts
+	 * const first = x.race([fetchData(), timeout(5000)])
+	 * // first: Program<Data, FetchError | TimeoutError, never>
+	 * ```
 	 */
 	race<const T extends readonly Program[]>(
 		_programs: T,
@@ -193,14 +219,22 @@ export class Shell<R = never> {
 	}
 
 	/**
-	 * Run a program that has no outstanding requirements.
+	 * Execute a `Program` that has no outstanding requirements.
+	 * Returns a `Promise` resolving to `Result<T, E>` containing a value or error.
+	 * Use `{ mode: "unwrap" }` to throw errors and return the value directly.
 	 *
 	 * @example
 	 * ```ts
+	 * // Default: returns a Result
 	 * const result = await x.run(program)
-	 * if (result.isSuccess()) {
+	 * if (result.success) {
 	 *   console.log(result.value)
+	 * } else {
+	 *   console.error(result.error)
 	 * }
+	 *
+	 * // Unwrap mode: throws on error, returns value directly
+	 * const value = await x.run(program, { mode: "unwrap" })
 	 * ```
 	 */
 	run<T, E, Options extends RunOptions>(
