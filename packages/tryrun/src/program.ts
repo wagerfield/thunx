@@ -116,22 +116,35 @@ export class Program<out T = unknown, out E = unknown, out R = never> {
 	}
 
 	/**
-	 * Catch and recover from errors.
-	 * Can return a plain value, Promise, or another Program.
+	 * Catch and handle errors from the `Program`.
+	 * Can return a recovery value, `Promise`, or `Program`.
+	 * Use `x.fail` to re-throw or transform errors.
 	 *
 	 * @example
 	 * ```ts
-	 * // Catch all errors
-	 * program.catch(err => defaultValue)
+	 * // Catch all errors with a fallback value
+	 * const handleAll = program.catch(() => null)
+	 * // handleAll: Program<T | null, never, R>
 	 *
-	 * // Catch by name
-	 * program.catch("NotFound", err => null)
+	 * // Catch specific error by name
+	 * const handleOne = program.catch("NotFoundError", () => null)
+	 * // handleOne: Program<T | null, Exclude<E, NotFoundError>, R>
 	 *
-	 * // Catch multiple by name
-	 * program.catch({
-	 *   NotFound: err => null,
-	 *   Timeout: err => x.fail(new RetryError())
+	 * // Catch multiple errors by name
+	 * const handleSome = program.catch({
+	 *   NotFoundError: () => null, // recover with null
+	 *   DatabaseError: (error) => x.fail(error), // re-throw error
+	 *   TimeoutError: () => x.fail(new RetryError()), // transform error
 	 * })
+	 * // handleSome: Program<T | null, DatabaseError | RetryError, R>
+	 *
+	 * // Transform errors using x.fail
+	 * const transformOne = program.catch("HttpError", (error) => {
+	 *   return error.status === 404
+	 *     ? x.fail(new NotFoundError())
+	 *     : x.fail(new ServerError())
+	 * })
+	 * // transformOne: Program<T, NotFoundError | ServerError, R>
 	 * ```
 	 */
 	catch<F>(

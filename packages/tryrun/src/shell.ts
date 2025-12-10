@@ -131,15 +131,20 @@ export class Shell<R = never> {
 	}
 
 	/**
-	 * Create a program that immediately fails with the given error.
+	 * Create a `Program` that fails with the given error.
+	 * Returns a `Program` with a `never` value type and no requirements.
 	 *
 	 * @example
 	 * ```ts
-	 * const prog = x.fail(new NotFoundError())
-	 * // prog: Program<never, NotFoundError, never>
+	 * // Create a failing program
+	 * const notFound = x.fail(new NotFoundError())
+	 * // notFound: Program<never, NotFoundError, never>
 	 *
-	 * // Use in then/catch for branching
-	 * prog.then((v) => v > 0 ? v : x.fail(new NegativeError()))
+	 * // Use for conditional branching in chains
+	 * const validated = program.then((value) => {
+	 *   return value > 0 ? value : x.fail(new ValidationError())
+	 * })
+	 * // validated: Program<number, ValidationError, never>
 	 * ```
 	 */
 	fail<E>(_error: E): Program<never, E, never> {
