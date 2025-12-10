@@ -25,23 +25,28 @@ import type {
 type ErrorByName<E, Name extends string> = E extends { name: Name } ? E : never
 
 /**
- * A program that produces a value of type T, may fail with error E,
- * and requires token implementations R to be provided before it can run.
+ * A `Program` represents a computation that:
+ * - Produces a success value (`T`)
+ * - Might fail with an error (`E`)
+ * - Has requirements that must be provided (`R` must be `never` to run)
  *
- * @typeParam T - Success value type
- * @typeParam E - Failure error type
- * @typeParam R - Union of required token types (must be `never` to run)
+ * Created via `Shell.try` and executed with `Shell.run`
  *
  * @example
  * ```ts
- * const prog = shell.try((ctx) => ctx.get(FooService).value)
- * // prog: Program<string, unknown, FooService>
+ * // Create a program with requirements
+ * const program = x.require(UserService).try({
+ *   try: (ctx) => ctx.get(UserService).name,
+ *   catch: (error) => new NotFoundError({ cause: error }),
+ * })
+ * // program: Program<string, NotFoundError, UserService>
  *
- * const runnable = prog.provide(fooProvider)
- * // runnable: Program<string, unknown, never>
+ * // Provide requirements to make it runnable
+ * const runnable = program.provide(appProvider)
+ * // runnable: Program<string, NotFoundError, never>
  * ```
  */
-export class Program<out T = unknown, out E = unknown, out R = never> {
+export class Program<out T = never, out E = never, out R = never> {
 	private constructor() {}
 
 	/**

@@ -172,7 +172,7 @@ export class Shell<R = never> {
 	 * const all = x.all(programs, { concurrency: 5 })
 	 * ```
 	 */
-	all<const T extends readonly Program[]>(
+	all<const T extends readonly Program<unknown, unknown, unknown>[]>(
 		_programs: T,
 		_options?: ConcurrencyOptions,
 	): Program<
@@ -194,7 +194,7 @@ export class Shell<R = never> {
 	 * // fastest: Program<User, CacheError | DatabaseError, never>
 	 * ```
 	 */
-	any<const T extends readonly Program[]>(
+	any<const T extends readonly Program<unknown, unknown, unknown>[]>(
 		_programs: T,
 	): Program<
 		UnionProgramValues<T>,
@@ -215,7 +215,7 @@ export class Shell<R = never> {
 	 * // first: Program<Data, FetchError | TimeoutError, never>
 	 * ```
 	 */
-	race<const T extends readonly Program[]>(
+	race<const T extends readonly Program<unknown, unknown, unknown>[]>(
 		_programs: T,
 	): Program<
 		UnionProgramValues<T>,
