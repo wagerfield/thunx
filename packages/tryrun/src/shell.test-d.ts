@@ -194,6 +194,35 @@ test("Shell.all() with runnable programs produces tuple", () => {
 	>()
 })
 
+test("Shell.all() accepts programs with requirements and combines them", () => {
+	const shell = new Shell()
+
+	const p1 = {} as Program<string, NotFoundError, FooInstance>
+	const p2 = {} as Program<number, TimeoutError, BarInstance>
+	const p3 = {} as Program<boolean, never, BazInstance>
+
+	const combined = shell.all([p1, p2, p3])
+	expectTypeOf(combined).toEqualTypeOf<
+		Program<
+			[string, number, boolean],
+			NotFoundError | TimeoutError,
+			FooInstance | BarInstance | BazInstance
+		>
+	>()
+})
+
+test("Shell.all() accepts mixed programs with and without requirements", () => {
+	const shell = new Shell()
+
+	const p1 = {} as Program<string, never, never>
+	const p2 = {} as Program<number, NotFoundError, FooInstance>
+
+	const combined = shell.all([p1, p2])
+	expectTypeOf(combined).toEqualTypeOf<
+		Program<[string, number], NotFoundError, FooInstance>
+	>()
+})
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Shell.any() and Shell.race()
 // ─────────────────────────────────────────────────────────────────────────────
@@ -219,6 +248,38 @@ test("Shell.race() returns union of values", () => {
 	const combined = shell.race([p1, p2])
 	expectTypeOf(combined).toEqualTypeOf<
 		Program<string | number, NotFoundError | TimeoutError, never>
+	>()
+})
+
+test("Shell.any() accepts programs with requirements and combines them", () => {
+	const shell = new Shell()
+
+	const p1 = {} as Program<string, NotFoundError, FooInstance>
+	const p2 = {} as Program<number, TimeoutError, BarInstance>
+
+	const combined = shell.any([p1, p2])
+	expectTypeOf(combined).toEqualTypeOf<
+		Program<
+			string | number,
+			NotFoundError | TimeoutError,
+			FooInstance | BarInstance
+		>
+	>()
+})
+
+test("Shell.race() accepts programs with requirements and combines them", () => {
+	const shell = new Shell()
+
+	const p1 = {} as Program<string, NotFoundError, FooInstance>
+	const p2 = {} as Program<number, TimeoutError, BarInstance>
+
+	const combined = shell.race([p1, p2])
+	expectTypeOf(combined).toEqualTypeOf<
+		Program<
+			string | number,
+			NotFoundError | TimeoutError,
+			FooInstance | BarInstance
+		>
 	>()
 })
 
