@@ -18,16 +18,17 @@ import type {
 } from "./types"
 
 /**
- * Shell for declaring requirements and creating programs.
+ * Shell for declaring requirements and creating and running programs.
  *
- * @typeParam R - Union of token INSTANCE types required by programs created from this shell
+ * @typeParam R - Union of tokens required by programs created from this shell
  *
  * @example
  * ```ts
- * const shell = x.require(FooService, BarService)
- * const prog = shell.try((ctx) => {
- *   const foo = ctx.get(FooService)
- *   return foo.value
+ * const shell = x.require(AuthService, UserService)
+ * const program = shell.try((ctx) => {
+ *   const auth = ctx.get(AuthService)
+ *   const user = ctx.get(UserService)
+ *   return auth.authenticate(user)
  * })
  * ```
  */
@@ -40,13 +41,19 @@ export class Shell<R = never> {
 	}
 
 	/**
-	 * Declare tokens that programs will require.
+	 * Create a `Shell` with required tokens.
+	 * Returns a new `Shell` with the combined requirements.
 	 * These must be provided before the program can be run.
 	 *
 	 * @example
 	 * ```ts
-	 * const shell = x.require(FooService, BarService)
-	 * // shell: Shell<FooService | BarService>
+	 * // Create a shell with one or more required tokens
+	 * const userShell = x.require(AuthService, UserService)
+	 * // userShell: Shell<AuthService | UserService>
+	 *
+	 * // Extend an existing shell with additional requirements
+	 * const appShell = userShell.require(DatabaseService)
+	 * // appShell: Shell<AuthService | UserService | DatabaseService>
 	 * ```
 	 */
 	require<T extends TokenClass[]>(
@@ -56,16 +63,22 @@ export class Shell<R = never> {
 	}
 
 	/**
-	 * Create a Provider with an initial token.
-	 * Convenience method equivalent to `provider().provide(token, factory)`.
+	 * Create a `Provider` for a token.
+	 * Returns a new `Provider` that can supply the token to programs.
 	 *
 	 * @example
 	 * ```ts
-	 * const p = x.provide(FooService, { foo: "FOO" })
-	 * // p: Provider<FooService>
+	 * // Create a provider with a static value
+	 * const provider = x.provide(EnvService, {
+	 *   DATABASE_URL: "postgres://...",
+	 * })
+	 * // provider: Provider<EnvService>
 	 *
-	 * const p2 = p.provide(BarService, (ctx) => ({ bar: ctx.get(FooService).foo }))
-	 * // p2: Provider<FooService | BarService>
+	 * // Extend a provider with a factory that accesses previous tokens
+	 * const extended = provider.provide(DatabaseService, (ctx) => ({
+	 *   connection: connect(ctx.get(EnvService).DATABASE_URL),
+	 * }))
+	 * // extended: Provider<EnvService | DatabaseService>
 	 * ```
 	 */
 	provide<T extends TokenClass>(
@@ -76,30 +89,31 @@ export class Shell<R = never> {
 	}
 
 	/**
-	 * Create a program that can access required tokens via context.
-	 * The callback can return a plain value, Promise, or another Program.
+	 * Create a `Program` from a synchronous value, `Promise`, or `Program`.
+	 * Thrown exceptions can be caught and transformed into typed errors.
+	 * Required tokens can be accessed via the callback's context argument.
 	 *
 	 * @example
 	 * ```ts
-	 * // Return a value
-	 * const prog = shell.try((ctx) => ctx.get(FooService).value)
+	 * // Wrap a synchronous value
+	 * const simple = x.try(() => "hello")
+	 * // simple: Program<string, never, never>
 	 *
-	 * // Return a Promise
-	 * const prog = shell.try((ctx) => fetchUser(ctx.get(Config).userId))
-	 *
-	 * // Return another Program (for composition)
-	 * const prog = shell.try((ctx) => {
-	 *   if (ctx.get(Config).useCache) {
-	 *     return getCachedUser()  // Returns Program
-	 *   }
-	 *   return fetchUser()        // Returns Program
+	 * // Wrap a Promise with error handling
+	 * const fetchUser = x.try({
+	 *   try: ({ signal }) => fetch("/api/user", { signal }).then((r) => r.json()),
+	 *   catch: (error) => new FetchUserError({ cause: error }),
 	 * })
+	 * // fetchUser: Program<User, FetchUserError, never>
 	 *
-	 * // Catch thrown exceptions
-	 * const prog = shell.try({
-	 *   try: (ctx) => JSON.parse(ctx.get(Config).json),
-	 *   catch: (e) => new ParseError({ cause: e })
+	 * // Access required tokens via context
+	 * const fetchUserProfile = x.require(UserService).try((ctx) => {
+	 *   const user = ctx.get(UserService)
+	 *   return user.id
+	 *     ? fetchProfile(user.id) // Program<UserProfile, never, never>
+	 *     : x.fail(new NotFoundError()) // Program<never, NotFoundError, never>
 	 * })
+	 * // fetchUserProfile: Program<UserProfile, NotFoundError, UserService>
 	 * ```
 	 */
 	try<T>(

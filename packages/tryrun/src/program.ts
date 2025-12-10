@@ -7,12 +7,22 @@ import type { Provider, TokenFactory } from "./provider"
 import type { TokenClass, TokenType } from "./token"
 import type {
 	RetryOptions,
-	Simplify,
 	TapObserver,
 	UnwrapError,
 	UnwrapRequirements,
 	UnwrapValue,
 } from "./types"
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Catch Helper Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Extract error by name from a union.
+ * Uses direct conditional instead of Extract for cleaner IDE tooltips.
+ * @internal
+ */
+type ErrorByName<E, Name extends string> = E extends { name: Name } ? E : never
 
 /**
  * A program that produces a value of type T, may fail with error E,
@@ -130,7 +140,7 @@ export class Program<out T = unknown, out E = unknown, out R = never> {
 
 	catch<Name extends ErrorName<E>, F>(
 		name: Name,
-		fn: (error: Extract<E, { name: Name }>) => F,
+		fn: (error: ErrorByName<E, Name>) => F,
 	): Program<
 		T | UnwrapValue<F>,
 		Exclude<E, { name: Name }> | UnwrapError<F>,
@@ -141,10 +151,8 @@ export class Program<out T = unknown, out E = unknown, out R = never> {
 		handlers: Handlers,
 	): Program<
 		T | UnwrapValue<ErrorHandlersReturnType<Handlers>>,
-		Simplify<
-			| Exclude<E, { name: keyof Handlers }>
-			| UnwrapError<ErrorHandlersReturnType<Handlers>>
-		>,
+		| Exclude<E, { name: keyof Handlers }>
+		| UnwrapError<ErrorHandlersReturnType<Handlers>>,
 		R | UnwrapRequirements<ErrorHandlersReturnType<Handlers>>
 	>
 

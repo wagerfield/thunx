@@ -88,15 +88,3 @@ export class Provider<out C = never> {
 		throw new Error("Provider.omit not implemented")
 	}
 }
-
-/**
- * Create an empty Provider.
- *
- * @example
- * ```ts
- * const p = provider()
- *   .provide(FooService, { foo: "FOO" })
- *   .provide(BarService, (ctx) => ({ bar: ctx.get(FooService).foo }))
- * ```
- */
-export const provider = (): Provider<never> => new Provider()

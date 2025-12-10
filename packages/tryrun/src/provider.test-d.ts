@@ -1,5 +1,5 @@
 import { expectTypeOf, test } from "vitest"
-import { Provider, provider } from "./provider"
+import { Provider } from "./provider"
 import { Token, type TokenType } from "./token"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -21,15 +21,6 @@ class BazService extends Token("BazService")<{
 type FooInstance = TokenType<typeof FooService>
 type BarInstance = TokenType<typeof BarService>
 type BazInstance = TokenType<typeof BazService>
-
-// ─────────────────────────────────────────────────────────────────────────────
-// provider() factory
-// ─────────────────────────────────────────────────────────────────────────────
-
-test("provider() creates empty Provider<never>", () => {
-	const p = provider()
-	expectTypeOf(p).toEqualTypeOf<Provider<never>>()
-})
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Provider.provide()
