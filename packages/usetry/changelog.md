@@ -1,4 +1,4 @@
-# tryrun
+# usetry
 
 ## 0.0.1
 

@@ -1,8 +1,8 @@
 {
-	"name": "tryrun",
+	"name": "usetry",
 	"version": "0.0.1",
 	"description": "Compose programs with errors and dependencies tracked at the type level. Zero runtime surprises.",
-	"homepage": "https://tryrun.vercel.app",
+	"homepage": "https://usetry.vercel.app",
 	"license": "MIT",
 	"author": {
 		"name": "Matthew Wagerfield",
@@ -11,10 +11,10 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/wagerfield/tryrun.git",
-		"directory": "packages/tryrun"
+		"url": "https://github.com/wagerfield/usetry.git",
+		"directory": "packages/usetry"
 	},
-	"bugs": "https://github.com/wagerfield/tryrun/issues",
+	"bugs": "https://github.com/wagerfield/usetry/issues",
 	"keywords": [
 		"composable",
 		"type-safe",
