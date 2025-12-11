@@ -38,11 +38,9 @@ export type ConcurrencyOptions = {
 	concurrency?: number
 }
 
-export type RunMode = "result" | "unwrap"
-
 export type RunOptions = {
 	signal?: AbortSignal
-	mode?: RunMode
+	unwrap?: boolean
 }
 
 export type TryOptions<T, E, R> = {

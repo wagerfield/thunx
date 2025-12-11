@@ -50,6 +50,33 @@ describe("Shell.require()", () => {
 	})
 })
 
+describe("Shell.provide()", () => {
+	test("creates Provider with static value", () => {
+		const shell = new Shell()
+		const provider = shell.provide(FooService, { foo: "hello" })
+
+		expectTypeOf(provider).toEqualTypeOf<Provider<FooInstance>>()
+	})
+
+	test("creates Provider with factory function", () => {
+		const shell = new Shell()
+		const provider = shell.provide(FooService, () => ({ foo: "hello" }))
+
+		expectTypeOf(provider).toEqualTypeOf<Provider<FooInstance>>()
+	})
+})
+
+describe("Shell.use()", () => {
+	test("returns Shell with same requirements", () => {
+		const shell = new Shell().require(FooService, BarService)
+		const withMiddleware = shell.use(async ({ next }) => next())
+
+		expectTypeOf(withMiddleware).toEqualTypeOf<
+			Shell<FooInstance | BarInstance>
+		>()
+	})
+})
+
 describe("Shell.try()", () => {
 	describe("with (ctx) => T function", () => {
 		test("infers Program types from callback return", () => {
@@ -284,15 +311,13 @@ describe("Shell.race()", () => {
 describe("Shell.run()", () => {
 	test("only accepts Program with never requirements", () => {
 		const shell = new Shell()
-
 		const runnable = {} as Program<string, Error, never>
 		const notRunnable = {} as Program<string, Error, FooInstance>
 
-		// This should work
+		// ✅ This should work
 		shell.run(runnable)
 
-		// This should be a type error
-		// @ts-expect-error - Program has unfulfilled requirements
+		// @ts-expect-error ❌ Program has unfulfilled requirements
 		shell.run(notRunnable)
 	})
 
@@ -304,28 +329,19 @@ describe("Shell.run()", () => {
 		expectTypeOf(result).toEqualTypeOf<Promise<Result<string, Error>>>()
 	})
 
-	test("with mode: unwrap returns Promise<T>", () => {
+	test("with unwrap: true returns Promise<T>", () => {
 		const shell = new Shell()
 		const program = {} as Program<string, Error, never>
-		const result = shell.run(program, { mode: "unwrap" })
+		const result = shell.run(program, { unwrap: true })
 
 		expectTypeOf(result).toEqualTypeOf<Promise<string>>()
 	})
 
-	test("with mode: result returns Promise<Result<T, E>>", () => {
+	test("with unwrap: false returns Promise<Result<T, E>>", () => {
 		const shell = new Shell()
 		const program = {} as Program<string, Error, never>
-		const result = shell.run(program, { mode: "result" })
+		const result = shell.run(program, { unwrap: false })
 
 		expectTypeOf(result).toEqualTypeOf<Promise<Result<string, Error>>>()
-	})
-})
-
-describe("Shell.provide()", () => {
-	test("creates Provider with token", () => {
-		const shell = new Shell()
-		const provider = shell.provide(FooService, { foo: "hello" })
-
-		expectTypeOf(provider).toEqualTypeOf<Provider<FooInstance>>()
 	})
 })

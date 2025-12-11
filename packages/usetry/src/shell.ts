@@ -41,13 +41,6 @@ import type {
  */
 export class Shell<R = never> {
 	/**
-	 * Add middleware to the shell.
-	 */
-	use(_middleware: Middleware<R>): Shell<R> {
-		throw new Error("Shell.use not implemented")
-	}
-
-	/**
 	 * Create a `Shell` with required tokens.
 	 * Returns a new `Shell` with the combined requirements.
 	 * These must be provided before the program can be run.
@@ -93,6 +86,13 @@ export class Shell<R = never> {
 		_factory: TokenFactory<never, T>,
 	): Provider<TokenType<T>> {
 		throw new Error("Shell.provide not implemented")
+	}
+
+	/**
+	 * Add middleware to the shell.
+	 */
+	use(_middleware: Middleware<R>): Shell<R> {
+		throw new Error("Shell.use not implemented")
 	}
 
 	/**
@@ -228,7 +228,7 @@ export class Shell<R = never> {
 	/**
 	 * Execute a `Program` that has no outstanding requirements.
 	 * Returns a `Promise` resolving to `Result<T, E>` containing a value or error.
-	 * Use `{ mode: "unwrap" }` to throw errors and return the value directly.
+	 * Use `{ unwrap: true }` to throw errors and return the value directly.
 	 *
 	 * @example
 	 * ```ts
@@ -240,14 +240,14 @@ export class Shell<R = never> {
 	 *   console.error(result.error)
 	 * }
 	 *
-	 * // Unwrap mode: throws on error, returns value directly
-	 * const value = await x.run(program, { mode: "unwrap" })
+	 * // Unwrap: throws on error, returns value directly
+	 * const value = await x.run(program, { unwrap: true })
 	 * ```
 	 */
 	run<T, E, Options extends RunOptions>(
 		_program: Program<T, E, never>,
 		_options?: Options,
-	): Options["mode"] extends "unwrap" ? Promise<T> : Promise<Result<T, E>> {
+	): Options["unwrap"] extends true ? Promise<T> : Promise<Result<T, E>> {
 		throw new Error("Shell.run not implemented")
 	}
 }
