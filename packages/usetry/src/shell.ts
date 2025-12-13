@@ -95,16 +95,21 @@ export class Shell<R = never> {
 	 *
 	 * @example
 	 * ```ts
-	 * // Add logging middleware
-	 * const shell = x.use(async ({ context, signal, next }) => {
+	 * // Logging middleware wraps all programs from this shell
+	 * const logged = x.use(async (ctx) => {
 	 *   console.log("Starting...")
-	 *   const result = await next()
+	 *   const result = await ctx.next()
 	 *   console.log("Done:", result.success)
 	 *   return result
 	 * })
+	 * const program = logged.try(() => fetchUser(id))
 	 *
-	 * // All programs from this shell are wrapped
-	 * const program = shell.try(() => fetchUser(id))
+	 * // Middleware can access shell requirements
+	 * const authenticated = x.require(AuthService).use(async (ctx) => {
+	 *   const auth = ctx.get(AuthService)
+	 *   if (!auth.isValid()) return { success: false, error: new AuthError() }
+	 *   return ctx.next()
+	 * })
 	 * ```
 	 */
 	use(_middleware: Middleware<R>): Shell<R> {
