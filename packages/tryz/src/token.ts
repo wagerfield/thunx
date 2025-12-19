@@ -35,25 +35,25 @@ declare const TokenClassBrand: unique symbol
  * ```
  */
 export const Token = <const Name extends string>(name: Name) =>
-	class Token {
-		static readonly name = name
+  class Token {
+    static readonly name = name
 
-		constructor(shape: Record<string, unknown>) {
-			Object.assign(this, shape)
-		}
-	} as TokenConstructor<Name>
+    constructor(shape: Record<string, unknown>) {
+      Object.assign(this, shape)
+    }
+  } as TokenConstructor<Name>
 
 export interface TokenConstructor<Name extends string> {
-	readonly name: Name
-	new <Shape extends Record<string, unknown>>(
-		shape: Shape,
-	): TokenInstance<Name, Shape>
+  readonly name: Name
+  new <Shape extends Record<string, unknown>>(
+    shape: Shape,
+  ): TokenInstance<Name, Shape>
 }
 
 export interface TokenClass {
-	readonly [TokenClassBrand]?: unknown
-	readonly name: string
-	new (shape: never): object
+  readonly [TokenClassBrand]?: unknown
+  readonly name: string
+  new (shape: never): object
 }
 
 /**
@@ -63,8 +63,8 @@ export interface TokenClass {
  * belongs to.
  */
 export type TokenInstance<
-	Name extends string,
-	Shape extends Record<string, unknown>,
+  Name extends string,
+  Shape extends Record<string, unknown>,
 > = Readonly<Shape> & { readonly [TokenNameBrand]: Name }
 
 export type TokenType<T> = T extends new (shape: never) => infer I ? I : never
@@ -73,8 +73,8 @@ export type TokenType<T> = T extends new (shape: never) => infer I ? I : never
  * Extracts the token name from an instance type via the phantom brand.
  */
 export type TokenName<I> = I extends { readonly [TokenNameBrand]: infer N }
-	? N
-	: never
+  ? N
+  : never
 
 /**
  * Extracts the "shape" of a token (the instance type without the phantom brand).
@@ -87,6 +87,6 @@ export type TokenName<I> = I extends { readonly [TokenNameBrand]: infer N }
  * ```
  */
 export type TokenShape<T extends TokenClass> = Omit<
-	TokenType<T>,
-	typeof TokenNameBrand
+  TokenType<T>,
+  typeof TokenNameBrand
 >

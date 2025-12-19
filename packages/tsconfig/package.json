@@ -1,8 +1,8 @@
 {
-	"private": true,
-	"type": "module",
-	"name": "@tryz/tsconfig",
-	"publishConfig": {
-		"access": "public"
-	}
+  "private": true,
+  "type": "module",
+  "name": "@tryz/tsconfig",
+  "publishConfig": {
+    "access": "public"
+  }
 }

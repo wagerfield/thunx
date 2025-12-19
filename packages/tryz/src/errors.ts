@@ -1,9 +1,9 @@
 import type { Simplify } from "./types"
 
 export interface TypedErrorShape {
-	readonly message?: string
-	readonly cause?: unknown
-	readonly [key: string]: unknown
+  readonly message?: string
+  readonly cause?: unknown
+  readonly [key: string]: unknown
 }
 
 /**
@@ -20,44 +20,44 @@ export interface TypedErrorShape {
  * ```
  */
 export const TypedError = <const Name extends string>(name: Name) =>
-	class TypedError extends Error {
-		static override readonly name = name
-		override readonly name = name
+  class TypedError extends Error {
+    static override readonly name = name
+    override readonly name = name
 
-		constructor(shape: TypedErrorShape = {}) {
-			const { message, cause, ...rest } = shape
-			super(message, { cause })
-			Object.assign(this, rest)
-		}
-	} as TypedErrorConstructor<Name>
+    constructor(shape: TypedErrorShape = {}) {
+      const { message, cause, ...rest } = shape
+      super(message, { cause })
+      Object.assign(this, rest)
+    }
+  } as TypedErrorConstructor<Name>
 
 export interface TypedErrorConstructor<Name extends string> {
-	readonly name: Name
-	new <Shape extends Record<string, unknown> = Record<string, unknown>>(
-		args?: { message?: string; cause?: unknown } & Shape,
-	): TypedErrorInstance<Name, Shape>
+  readonly name: Name
+  new <Shape extends Record<string, unknown> = Record<string, unknown>>(
+    args?: { message?: string; cause?: unknown } & Shape,
+  ): TypedErrorInstance<Name, Shape>
 }
 
 export type TypedErrorInstance<
-	Name extends string,
-	Shape extends Record<string, unknown>,
+  Name extends string,
+  Shape extends Record<string, unknown>,
 > = Error & { readonly name: Name } & Readonly<Shape>
 
 export class Defect extends TypedError("Defect") {}
 
 export const defect = (error?: unknown): never => {
-	if (error instanceof Error) {
-		throw new Defect({
-			message: error.message,
-			stack: error.stack,
-			cause: error,
-		})
-	}
+  if (error instanceof Error) {
+    throw new Defect({
+      message: error.message,
+      stack: error.stack,
+      cause: error,
+    })
+  }
 
-	throw new Defect({
-		message: "Unexpected error",
-		cause: error,
-	})
+  throw new Defect({
+    message: "Unexpected error",
+    cause: error,
+  })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,8 +74,8 @@ export const defect = (error?: unknown): never => {
  * ```
  */
 export type ErrorName<E> = E extends { name: infer N extends string }
-	? N
-	: never
+  ? N
+  : never
 
 /**
  * Handler object type for catching multiple errors by name.
@@ -90,14 +90,14 @@ export type ErrorName<E> = E extends { name: infer N extends string }
  * ```
  */
 export type ErrorHandlers<E> = {
-	[N in ErrorName<E>]?: (error: Extract<E, { name: N }>) => unknown
+  [N in ErrorName<E>]?: (error: Extract<E, { name: N }>) => unknown
 }
 
 /**
  * Extract union of return types from error handlers.
  */
 export type ErrorHandlersReturnType<H> = Simplify<
-	{
-		[K in keyof H]: H[K] extends (...args: never[]) => infer R ? R : never
-	}[keyof H]
+  {
+    [K in keyof H]: H[K] extends (...args: never[]) => infer R ? R : never
+  }[keyof H]
 >

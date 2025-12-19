@@ -1,42 +1,42 @@
 {
-	"$schema": "https://turborepo.com/schema.json",
-	"ui": "tui",
-	"tasks": {
-		"//#lint:check": {
-			"cache": false
-		},
-		"//#lint:write": {
-			"cache": false
-		},
-		"//#test:run": {
-			"outputs": ["coverage/**"]
-		},
-		"//#test:watch": {
-			"interactive": true,
-			"persistent": true,
-			"cache": false
-		},
-		"transit": {
-			"dependsOn": ["^transit"]
-		},
-		"type:check": {
-			"dependsOn": ["transit"]
-		},
-		"dev": {
-			"inputs": ["$TURBO_DEFAULT$", ".env*"],
-			"persistent": true,
-			"cache": false
-		},
-		"build": {
-			"dependsOn": ["^build"],
-			"inputs": ["$TURBO_DEFAULT$", ".env*"],
-			"outputs": ["dist/**"],
-			"env": []
-		},
-		"start": {
-			"dependsOn": ["^build"],
-			"persistent": true,
-			"cache": false
-		}
-	}
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "//#lint:check": {
+      "cache": false
+    },
+    "//#lint:write": {
+      "cache": false
+    },
+    "//#test:run": {
+      "outputs": ["coverage/**"]
+    },
+    "//#test:watch": {
+      "interactive": true,
+      "persistent": true,
+      "cache": false
+    },
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
+    "type:check": {
+      "dependsOn": ["transit"]
+    },
+    "dev": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "persistent": true,
+      "cache": false
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**"],
+      "env": []
+    },
+    "start": {
+      "dependsOn": ["^build"],
+      "persistent": true,
+      "cache": false
+    }
+  }
 }

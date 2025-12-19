@@ -23,28 +23,28 @@ export type Simplify<A> = { [K in keyof A]: A[K] } extends infer B ? B : never
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type RetryOptions = {
-	times?: number
-	delay?: number | ((attempt: number) => number)
-	while?: (error: unknown) => boolean
+  times?: number
+  delay?: number | ((attempt: number) => number)
+  while?: (error: unknown) => boolean
 }
 
 export type ConcurrencyOptions = {
-	concurrency?: number
+  concurrency?: number
 }
 
 export type RunOptions = {
-	signal?: AbortSignal
-	unwrap?: boolean
+  signal?: AbortSignal
+  unwrap?: boolean
 }
 
 export type TryOptions<T, E, R> = {
-	try: (ctx: Context<R>) => T
-	catch: (e: unknown) => E
+  try: (ctx: Context<R>) => T
+  catch: (e: unknown) => E
 }
 
 export type TapOptions<T, E, U, F> = {
-	value?: (value: T) => U
-	error?: (error: E) => F
+  value?: (value: T) => U
+  error?: (error: E) => F
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -61,8 +61,8 @@ export type AnyProgram = Program<any, any, any>
  * Extract the [Value, Error, Requirements] tuple from a Program type.
  */
 export type ProgramTypes<P> = [P] extends [Program<infer T, infer E, infer R>]
-	? [T, E, R]
-	: never
+  ? [T, E, R]
+  : never
 
 /**
  * Extract the success value type from a Program.
@@ -83,8 +83,8 @@ export type ProgramRequirements<P> = ProgramTypes<P>[2]
  * Extract the Result<T, E> type from a Program.
  */
 export type ProgramResult<P> = [P] extends [Program<infer T, infer E>]
-	? Result<T, E>
-	: never
+  ? Result<T, E>
+  : never
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Program Tuple/Array Utilities
@@ -96,38 +96,38 @@ export type ProgramResult<P> = [P] extends [Program<infer T, infer E>]
  * Note: Returns a union, not a mapped tuple.
  */
 export type UnionProgramTypes<T extends readonly AnyProgram[]> =
-	T[number] extends Program<infer V, infer E, infer R> ? [V, E, R] : never
+  T[number] extends Program<infer V, infer E, infer R> ? [V, E, R] : never
 
 /**
  * Extract union of all value types from a program tuple.
  */
 export type UnionProgramValues<T extends readonly AnyProgram[]> =
-	UnionProgramTypes<T>[0]
+  UnionProgramTypes<T>[0]
 
 /**
  * Extract union of all error types from a program tuple.
  */
 export type UnionProgramErrors<T extends readonly AnyProgram[]> =
-	UnionProgramTypes<T>[1]
+  UnionProgramTypes<T>[1]
 
 /**
  * Extract union of all requirement types from a program tuple.
  */
 export type UnionProgramRequirements<T extends readonly AnyProgram[]> =
-	UnionProgramTypes<T>[2]
+  UnionProgramTypes<T>[2]
 
 /**
  * Map a program tuple to a tuple of value types (preserves tuple structure).
  */
 export type ProgramValuesTuple<T extends readonly AnyProgram[]> = {
-	-readonly [K in keyof T]: ProgramValue<T[K]>
+  -readonly [K in keyof T]: ProgramValue<T[K]>
 }
 
 /**
  * Map a program tuple to a tuple of Result types (preserves tuple structure).
  */
 export type ProgramResultTuple<T extends readonly AnyProgram[]> = {
-	-readonly [K in keyof T]: ProgramResult<T[K]>
+  -readonly [K in keyof T]: ProgramResult<T[K]>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -142,11 +142,11 @@ export type ProgramResultTuple<T extends readonly AnyProgram[]> = {
  * Explicitly handles `any` to return `any` since `any` is not a Program.
  */
 export type UnwrapValue<T> =
-	IsAny<T> extends true
-		? any
-		: T extends Program<infer U, unknown, unknown>
-			? U
-			: Awaited<T>
+  IsAny<T> extends true
+    ? any
+    : T extends Program<infer U, unknown, unknown>
+      ? U
+      : Awaited<T>
 
 /**
  * Extract the error type from Program, or never for plain values/Promises.
@@ -154,11 +154,11 @@ export type UnwrapValue<T> =
  * Uses distributive conditional to extract errors from Program members of unions.
  */
 export type UnwrapError<T> =
-	IsAny<T> extends true
-		? never
-		: T extends Program<unknown, infer E, unknown>
-			? E
-			: never
+  IsAny<T> extends true
+    ? never
+    : T extends Program<unknown, infer E, unknown>
+      ? E
+      : never
 
 /**
  * Extract the requirements from Program, or never for plain values/Promises.
@@ -166,8 +166,8 @@ export type UnwrapError<T> =
  * Uses distributive conditional to extract requirements from Program members of unions.
  */
 export type UnwrapRequirements<T> =
-	IsAny<T> extends true
-		? never
-		: T extends Program<unknown, unknown, infer R>
-			? R
-			: never
+  IsAny<T> extends true
+    ? never
+    : T extends Program<unknown, unknown, infer R>
+      ? R
+      : never

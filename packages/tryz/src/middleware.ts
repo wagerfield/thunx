@@ -26,20 +26,20 @@ import type { Result } from "./result"
  * ```
  */
 export class MiddlewareContext<R = never> extends Context<R> {
-	/**
-	 * Continue execution to the next middleware or program.
-	 * Returns a `Result` containing either the success value or error.
-	 */
-	readonly next: () => Promise<Result<unknown, unknown>>
+  /**
+   * Continue execution to the next middleware or program.
+   * Returns a `Result` containing either the success value or error.
+   */
+  readonly next: () => Promise<Result<unknown, unknown>>
 
-	constructor(
-		provider: Provider<R>,
-		signal: AbortSignal,
-		next: () => Promise<Result<unknown, unknown>>,
-	) {
-		super(provider, signal)
-		this.next = next
-	}
+  constructor(
+    provider: Provider<R>,
+    signal: AbortSignal,
+    next: () => Promise<Result<unknown, unknown>>,
+  ) {
+    super(provider, signal)
+    this.next = next
+  }
 }
 
 /**
@@ -69,5 +69,5 @@ export class MiddlewareContext<R = never> extends Context<R> {
  * ```
  */
 export type Middleware<R = never> = (
-	ctx: MiddlewareContext<R>,
+  ctx: MiddlewareContext<R>,
 ) => Result<unknown, unknown> | Promise<Result<unknown, unknown>>

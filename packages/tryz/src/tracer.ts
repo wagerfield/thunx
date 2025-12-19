@@ -9,8 +9,8 @@ export type SpanAttributes = Record<string, unknown>
  * Options for creating a span.
  */
 export type SpanOptions = {
-	name: string
-	attributes?: SpanAttributes
+  name: string
+  attributes?: SpanAttributes
 }
 
 /**
@@ -33,5 +33,5 @@ export type SpanOptions = {
  * ```
  */
 export class Tracer extends Token("Tracer")<{
-	span: <T>(options: SpanOptions, fn: () => T) => T
+  span: <T>(options: SpanOptions, fn: () => T) => T
 }> {}

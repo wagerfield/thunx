@@ -1,53 +1,53 @@
 {
-	"name": "tryz",
-	"version": "0.0.1",
-	"description": "Compose programs with errors and dependencies tracked at the type level. Zero runtime surprises.",
-	"homepage": "https://tryz.run",
-	"license": "MIT",
-	"author": {
-		"name": "Matthew Wagerfield",
-		"email": "matthew@wagerfield.com",
-		"url": "https://matthew.wagerfield.com"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/wagerfield/tryz.git",
-		"directory": "packages/tryz"
-	},
-	"bugs": "https://github.com/wagerfield/tryz/issues",
-	"keywords": [
-		"composable",
-		"type-safe",
-		"programs",
-		"promises",
-		"error-tracking",
-		"error-handling",
-		"dependency-injection",
-		"result"
-	],
-	"type": "module",
-	"sideEffects": false,
-	"exports": {
-		".": {
-			"types": "./dist/index.d.mts",
-			"default": "./dist/index.mjs"
-		}
-	},
-	"files": [
-		"dist"
-	],
-	"engines": {
-		"node": ">=18"
-	},
-	"scripts": {
-		"build": "tsdown",
-		"dev": "tsdown --watch",
-		"type:check": "tsc --noEmit",
-		"prepublishOnly": "pnpm run build"
-	},
-	"devDependencies": {
-		"@types/node": "24.10.1",
-		"tsdown": "0.17.0-beta.5",
-		"typescript": "5.9.3"
-	}
+  "name": "tryz",
+  "version": "0.0.1",
+  "description": "Compose programs with errors and dependencies tracked at the type level. Zero runtime surprises.",
+  "homepage": "https://tryz.run",
+  "license": "MIT",
+  "author": {
+    "name": "Matthew Wagerfield",
+    "email": "matthew@wagerfield.com",
+    "url": "https://matthew.wagerfield.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wagerfield/tryz.git",
+    "directory": "packages/tryz"
+  },
+  "bugs": "https://github.com/wagerfield/tryz/issues",
+  "keywords": [
+    "composable",
+    "type-safe",
+    "programs",
+    "promises",
+    "error-tracking",
+    "error-handling",
+    "dependency-injection",
+    "result"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "type:check": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "tsdown": "0.17.0-beta.5",
+    "typescript": "5.9.3"
+  }
 }

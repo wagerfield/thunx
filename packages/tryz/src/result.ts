@@ -4,8 +4,8 @@
  * @typeParam T - The type of the success value
  */
 export type Success<T> = {
-	readonly success: true
-	readonly value: T
+  readonly success: true
+  readonly value: T
 }
 
 /**
@@ -14,8 +14,8 @@ export type Success<T> = {
  * @typeParam E - The type of the error
  */
 export type Failure<E> = {
-	readonly success: false
-	readonly error: E
+  readonly success: false
+  readonly error: E
 }
 
 /**

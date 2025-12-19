@@ -7,15 +7,15 @@ import { Token, type TokenType } from "./token"
 // ─────────────────────────────────────────────────────────────────────────────
 
 class FooService extends Token("FooService")<{
-	readonly foo: string
+  readonly foo: string
 }> {}
 
 class BarService extends Token("BarService")<{
-	readonly bar: number
+  readonly bar: number
 }> {}
 
 class BazService extends Token("BazService")<{
-	readonly baz: boolean
+  readonly baz: boolean
 }> {}
 
 type FooInstance = TokenType<typeof FooService>
@@ -27,34 +27,34 @@ type BazInstance = TokenType<typeof BazService>
 // ─────────────────────────────────────────────────────────────────────────────
 
 test("Provider.provide() accumulates token types", () => {
-	const p1 = new Provider().provide(FooService, { foo: "hello" })
-	expectTypeOf(p1).toEqualTypeOf<Provider<FooInstance>>()
+  const p1 = new Provider().provide(FooService, { foo: "hello" })
+  expectTypeOf(p1).toEqualTypeOf<Provider<FooInstance>>()
 
-	const p2 = p1.provide(BarService, { bar: 42 })
-	expectTypeOf(p2).toEqualTypeOf<Provider<FooInstance | BarInstance>>()
+  const p2 = p1.provide(BarService, { bar: 42 })
+  expectTypeOf(p2).toEqualTypeOf<Provider<FooInstance | BarInstance>>()
 
-	const p3 = p2.provide(BazService, { baz: true })
-	expectTypeOf(p3).toEqualTypeOf<
-		Provider<FooInstance | BarInstance | BazInstance>
-	>()
+  const p3 = p2.provide(BazService, { baz: true })
+  expectTypeOf(p3).toEqualTypeOf<
+    Provider<FooInstance | BarInstance | BazInstance>
+  >()
 })
 
 test("Provider.provide() accepts value factory", () => {
-	const p = new Provider().provide(FooService, { foo: "hello" })
-	expectTypeOf(p).toEqualTypeOf<Provider<FooInstance>>()
+  const p = new Provider().provide(FooService, { foo: "hello" })
+  expectTypeOf(p).toEqualTypeOf<Provider<FooInstance>>()
 })
 
 test("Provider.provide() accepts function factory with context", () => {
-	const p = new Provider()
-		.provide(FooService, { foo: "hello" })
-		.provide(BarService, (ctx) => {
-			// ctx should have access to previously provided tokens
-			const foo = ctx.get(FooService)
-			expectTypeOf(foo.foo).toEqualTypeOf<string>()
-			return { bar: foo.foo.length }
-		})
+  const p = new Provider()
+    .provide(FooService, { foo: "hello" })
+    .provide(BarService, (ctx) => {
+      // ctx should have access to previously provided tokens
+      const foo = ctx.get(FooService)
+      expectTypeOf(foo.foo).toEqualTypeOf<string>()
+      return { bar: foo.foo.length }
+    })
 
-	expectTypeOf(p).toEqualTypeOf<Provider<FooInstance | BarInstance>>()
+  expectTypeOf(p).toEqualTypeOf<Provider<FooInstance | BarInstance>>()
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -62,17 +62,17 @@ test("Provider.provide() accepts function factory with context", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 test("Provider.get() only accepts tokens in C", () => {
-	const p = new Provider()
-		.provide(FooService, { foo: "hello" })
-		.provide(BarService, { bar: 42 })
+  const p = new Provider()
+    .provide(FooService, { foo: "hello" })
+    .provide(BarService, { bar: 42 })
 
-	// These should work
-	p.get(FooService)
-	p.get(BarService)
+  // These should work
+  p.get(FooService)
+  p.get(BarService)
 
-	// This should be a type error
-	// @ts-expect-error - BazService is not provided
-	p.get(BazService)
+  // This should be a type error
+  // @ts-expect-error - BazService is not provided
+  p.get(BazService)
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,12 +80,12 @@ test("Provider.get() only accepts tokens in C", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 test("Provider.pick() with single token", () => {
-	const full = new Provider()
-		.provide(FooService, { foo: "hello" })
-		.provide(BarService, { bar: 42 })
+  const full = new Provider()
+    .provide(FooService, { foo: "hello" })
+    .provide(BarService, { bar: 42 })
 
-	const picked = full.pick(FooService)
-	expectTypeOf(picked).toEqualTypeOf<Provider<FooInstance>>()
+  const picked = full.pick(FooService)
+  expectTypeOf(picked).toEqualTypeOf<Provider<FooInstance>>()
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -93,17 +93,17 @@ test("Provider.pick() with single token", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 test("Provider.omit() excludes specified token", () => {
-	const full = new Provider()
-		.provide(FooService, { foo: "hello" })
-		.provide(BarService, { bar: 42 })
+  const full = new Provider()
+    .provide(FooService, { foo: "hello" })
+    .provide(BarService, { bar: 42 })
 
-	const omitted = full.omit(BarService)
-	expectTypeOf(omitted).toEqualTypeOf<Provider<FooInstance>>()
+  const omitted = full.omit(BarService)
+  expectTypeOf(omitted).toEqualTypeOf<Provider<FooInstance>>()
 })
 
 test("Provider.omit() all tokens results in Provider<never>", () => {
-	const full = new Provider().provide(FooService, { foo: "hello" })
+  const full = new Provider().provide(FooService, { foo: "hello" })
 
-	const omitted = full.omit(FooService)
-	expectTypeOf(omitted).toEqualTypeOf<Provider<never>>()
+  const omitted = full.omit(FooService)
+  expectTypeOf(omitted).toEqualTypeOf<Provider<never>>()
 })
