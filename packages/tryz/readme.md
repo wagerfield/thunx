@@ -32,33 +32,33 @@ import { x, Token, TypedError } from "tryz"
 
 // Define a service token
 class UserService extends Token("UserService")<{
-	getUser: (id: string) => Promise<User>
+  getUser: (id: string) => Promise<User>
 }> {}
 
 // Define a typed error
 class NotFoundError extends TypedError("NotFound")<{
-	resource: string
+  resource: string
 }> {}
 
 // Create a program with typed dependencies and errors
 const getUser = x.require(UserService).try(async (ctx) => {
-	const user = await ctx.get(UserService).getUser("123")
-	// Use x.fail() for type-safe errors
-	if (!user) return x.fail(new NotFoundError({ resource: "user" }))
-	return user
+  const user = await ctx.get(UserService).getUser("123")
+  // Use x.fail() for type-safe errors
+  if (!user) return x.fail(new NotFoundError({ resource: "user" }))
+  return user
 })
 // Type: Program<User, NotFoundError, UserService>
 
 // Provide dependencies and run
 const result = await x.run(
-	getUser.provide(x.provide(UserService, { getUser: fetchUser })),
+  getUser.provide(x.provide(UserService, { getUser: fetchUser })),
 )
 
 // Result has discriminated union type
 if (result.success) {
-	console.log(result.value) // User
+  console.log(result.value) // User
 } else {
-	console.error(result.error) // NotFoundError
+  console.error(result.error) // NotFoundError
 }
 ```
 

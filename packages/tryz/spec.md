@@ -65,8 +65,8 @@ Program.try(() => 42)
 // Program<number, never, never>
 
 Program.try({
-	try: () => fetch(url),
-	catch: (error) => new FetchError({ cause: error }),
+  try: () => fetch(url),
+  catch: (error) => new FetchError({ cause: error }),
 })
 // Program<Response, FetchError, never>
 
@@ -82,10 +82,10 @@ Composes `Programs` using generator syntax. Yield `Programs`, `Tokens`, or `Type
 
 ```ts
 Program.gen(function* () {
-	const auth = yield* AuthService // R += AuthService
-	const user = yield* fetchUser(auth.userId) // E += FetchError
-	if (!user.active) yield* new InactiveError() // E += InactiveError
-	return user // T += User
+  const auth = yield* AuthService // R += AuthService
+  const user = yield* fetchUser(auth.userId) // E += FetchError
+  if (!user.active) yield* new InactiveError() // E += InactiveError
+  return user // T += User
 })
 // Program<User, FetchError | InactiveError, AuthService>
 ```
@@ -162,8 +162,8 @@ program.then((v) => v.name)
 // Program<string, E, R>
 
 program.then((v) => {
-	if (!v) return new NotFoundError()
-	return v.name
+  if (!v) return new NotFoundError()
+  return v.name
 })
 // Program<string, E | NotFoundError, R>
 ```
@@ -180,8 +180,8 @@ program.catch("NotFoundError", (e) => null)
 // Program<T | null, Exclude<E, NotFoundError>, R>
 
 program.catch({
-	NotFoundError: (e) => null,
-	TimeoutError: (e) => new RetryError(),
+  NotFoundError: (e) => null,
+  TimeoutError: (e) => new RetryError(),
 })
 // Program<T | null, Exclude<E, ...> | RetryError, R>
 ```
@@ -211,8 +211,8 @@ Runs side effects without changing the value.
 program.tap((v) => console.log(v))
 
 program.tap({
-	value: (v) => console.log(v),
-	error: (e) => console.error(e),
+  value: (v) => console.log(v),
+  error: (e) => console.error(e),
 })
 ```
 
@@ -262,7 +262,7 @@ All errors in `E` are `TypedError` instances with a typed `name` for discriminat
 
 ```ts
 class NotFoundError extends TypedError("NotFoundError")<{
-	readonly resource: string
+  readonly resource: string
 }> {}
 ```
 
@@ -272,14 +272,14 @@ Return or yield to fail — no `throw` needed:
 
 ```ts
 program.then((v) => {
-	if (!v) return new NotFoundError({ resource: "user" })
-	return v
+  if (!v) return new NotFoundError({ resource: "user" })
+  return v
 })
 
 Program.gen(function* () {
-	const user = yield* fetchUser(id)
-	if (!user) yield* new NotFoundError({ resource: "user" })
-	return user
+  const user = yield* fetchUser(id)
+  if (!user) yield* new NotFoundError({ resource: "user" })
+  return user
 })
 ```
 
@@ -301,7 +301,7 @@ Program.gen(function* () {
 
 ```ts
 class UserService extends Token("UserService")<{
-	readonly getUser: (id: string) => Program<User, FetchError, never>
+  readonly getUser: (id: string) => Program<User, FetchError, never>
 }> {}
 ```
 
@@ -325,13 +325,13 @@ Program.all({ user: UserService, config: ConfigService })
 
 ```ts
 const provider = Provider.provide(ConfigService, () => ({
-	apiUrl: "https://...",
+  apiUrl: "https://...",
 })).provide(UserService, (ctx) => ({
-	getUser: (id) =>
-		Program.try({
-			try: () => fetch(`${ctx.get(ConfigService).apiUrl}/users/${id}`),
-			catch: (e) => new FetchError({ cause: e }),
-		}),
+  getUser: (id) =>
+    Program.try({
+      try: () => fetch(`${ctx.get(ConfigService).apiUrl}/users/${id}`),
+      catch: (e) => new FetchError({ cause: e }),
+    }),
 }))
 
 program.provide(provider)
@@ -346,12 +346,12 @@ Execution context passed to factories. Two variants exist:
 ```ts
 // Base context (Program.try, Provider.provide static)
 interface Context {
-	readonly signal: AbortSignal
+  readonly signal: AbortSignal
 }
 
 // Extended context (Provider .provide instance method)
 interface ProviderContext<C> extends Context {
-	get<T extends C>(token: TokenClass<T>): TokenInstance<T>
+  get<T extends C>(token: TokenClass<T>): TokenInstance<T>
 }
 ```
 
@@ -384,15 +384,15 @@ Bundles `Token` provisions with inter-token dependencies.
 ```ts
 // Create with static method (factory receives Context)
 const configProvider = Provider.provide(ConfigService, (ctx) => ({
-	apiUrl: "https://...",
+  apiUrl: "https://...",
 }))
 
 // Chain with instance method (factory receives ProviderContext<C>)
 const appProvider = Provider.provide(ConfigService, () => ({
-	apiUrl: "https://...",
+  apiUrl: "https://...",
 }))
-	.provide(DbService, (ctx) => createDb(ctx.get(ConfigService).apiUrl))
-	.provide(UserService, (ctx) => createUserService(ctx.get(DbService)))
+  .provide(DbService, (ctx) => createDb(ctx.get(ConfigService).apiUrl))
+  .provide(UserService, (ctx) => createUserService(ctx.get(DbService)))
 
 // Combine providers
 const fullProvider = Provider.merge(authProvider, appProvider)
@@ -413,8 +413,8 @@ The return type of `Program.run`.
 
 ```ts
 type Result<T, E> =
-	| { readonly ok: true; readonly value: T }
-	| { readonly ok: false; readonly error: E }
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly error: E }
 ```
 
 ---
@@ -462,12 +462,12 @@ program.provide(fullProvider) // R = never → runnable
 ```ts
 // Tokens
 class ConfigService extends Token("ConfigService")<{
-	readonly apiUrl: string
-	readonly timeout: number
+  readonly apiUrl: string
+  readonly timeout: number
 }> {}
 
 class UserService extends Token("UserService")<{
-	readonly getUser: (id: string) => Program<User, FetchError, never>
+  readonly getUser: (id: string) => Program<User, FetchError, never>
 }> {}
 
 // Errors
@@ -475,28 +475,28 @@ class UnauthorizedError extends TypedError("UnauthorizedError") {}
 
 // Program
 const getUserProfile = (id: string) =>
-	Program.gen(function* () {
-		const config = yield* ConfigService
-		const userService = yield* UserService
-		const user = yield* userService.getUser(id).timeout(config.timeout)
-		if (!user.active) yield* new UnauthorizedError()
-		return { id: user.id, name: user.name, email: user.email }
-	})
+  Program.gen(function* () {
+    const config = yield* ConfigService
+    const userService = yield* UserService
+    const user = yield* userService.getUser(id).timeout(config.timeout)
+    if (!user.active) yield* new UnauthorizedError()
+    return { id: user.id, name: user.name, email: user.email }
+  })
 // Program<UserProfile, FetchError | TimeoutError | UnauthorizedError, ConfigService | UserService>
 
 // Provider
 const appProvider = Provider.provide(ConfigService, () => ({
-	apiUrl: "https://api.example.com",
-	timeout: 5000,
+  apiUrl: "https://api.example.com",
+  timeout: 5000,
 })).provide(UserService, (ctx) => ({
-	getUser: (id) =>
-		Program.try({
-			try: () =>
-				fetch(`${ctx.get(ConfigService).apiUrl}/users/${id}`).then((r) =>
-					r.json(),
-				),
-			catch: (e) => new FetchError({ cause: e }),
-		}),
+  getUser: (id) =>
+    Program.try({
+      try: () =>
+        fetch(`${ctx.get(ConfigService).apiUrl}/users/${id}`).then((r) =>
+          r.json(),
+        ),
+      catch: (e) => new FetchError({ cause: e }),
+    }),
 }))
 
 // Execute

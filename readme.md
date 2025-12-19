@@ -32,53 +32,53 @@ import { x, Token, TypedError } from "tryz"
 
 // Define service tokens
 class UserService extends Token("UserService")<{
-	getUser: (id: string) => Promise<User>
+  getUser: (id: string) => Promise<User>
 }> {}
 
 class Logger extends Token("Logger")<{
-	log: (msg: string) => void
+  log: (msg: string) => void
 }> {}
 
 // Define typed errors
 class NotFoundError extends TypedError("NotFound")<{
-	resource: string
-	id: string
+  resource: string
+  id: string
 }> {}
 
 // Create a program with tracked requirements
 const getUser = x.require(UserService, Logger).try(async (ctx) => {
-	const userService = ctx.get(UserService)
-	const logger = ctx.get(Logger)
+  const userService = ctx.get(UserService)
+  const logger = ctx.get(Logger)
 
-	logger.log("Fetching user...")
-	const user = await userService.getUser("123")
+  logger.log("Fetching user...")
+  const user = await userService.getUser("123")
 
-	if (!user) {
-		return x.fail(
-			new NotFoundError({
-				resource: "user",
-				id: "123",
-			}),
-		)
-	}
+  if (!user) {
+    return x.fail(
+      new NotFoundError({
+        resource: "user",
+        id: "123",
+      }),
+    )
+  }
 
-	return user
+  return user
 })
 // Type: Program<User, NotFoundError, UserService | Logger>
 
 // Provide dependencies
 const runnable = getUser
-	.provide(x.provide(UserService, { getUser: fetchUserFromApi }))
-	.provide(x.provide(Logger, { log: console.log }))
+  .provide(x.provide(UserService, { getUser: fetchUserFromApi }))
+  .provide(x.provide(Logger, { log: console.log }))
 // Type: Program<User, NotFoundError, never>
 
 // Run when all requirements are satisfied
 const result = await x.run(runnable)
 
 if (result.success) {
-	console.log(result.value) // User
+  console.log(result.value) // User
 } else {
-	console.error(result.error) // NotFoundError
+  console.error(result.error) // NotFoundError
 }
 ```
 
@@ -120,14 +120,14 @@ Tokens define injectable services with typed interfaces.
 
 ```typescript
 class ConfigService extends Token("ConfigService")<{
-	apiUrl: string
-	timeout: number
+  apiUrl: string
+  timeout: number
 }> {}
 
 // Use in programs
 const program = x.require(ConfigService).try((ctx) => {
-	const config = ctx.get(ConfigService)
-	return fetch(config.apiUrl)
+  const config = ctx.get(ConfigService)
+  return fetch(config.apiUrl)
 })
 ```
 
@@ -137,14 +137,14 @@ Providers supply implementations for tokens.
 
 ```typescript
 const provider = x
-	.provide(ConfigService, {
-		apiUrl: "https://api.example.com",
-		timeout: 5000,
-	})
-	.provide(Logger, (ctx) => ({
-		// Can depend on other provided services
-		log: (msg) => console.log(`[${ctx.get(ConfigService).apiUrl}] ${msg}`),
-	}))
+  .provide(ConfigService, {
+    apiUrl: "https://api.example.com",
+    timeout: 5000,
+  })
+  .provide(Logger, (ctx) => ({
+    // Can depend on other provided services
+    log: (msg) => console.log(`[${ctx.get(ConfigService).apiUrl}] ${msg}`),
+  }))
 ```
 
 ### Result<T, E>
@@ -155,9 +155,9 @@ Programs return a `Result` that's either a `Success<T>` or `Failure<E>`.
 const result = await x.run(program)
 
 if (result.success) {
-	console.log(result.value)
+  console.log(result.value)
 } else {
-	console.error(result.error)
+  console.error(result.error)
 }
 ```
 
@@ -167,13 +167,13 @@ Create domain-specific errors with typed payloads.
 
 ```typescript
 class ValidationError extends TypedError("Validation")<{
-	field: string
-	message: string
+  field: string
+  message: string
 }> {}
 
 throw new ValidationError({
-	field: "email",
-	message: "Invalid format",
+  field: "email",
+  message: "Invalid format",
 })
 ```
 
@@ -183,12 +183,12 @@ throw new ValidationError({
 
 ```typescript
 program
-	.then((value) => transform(value)) // Transform success value
-	.tap((value) => console.log(value)) // Side effect on success
-	.tap({
-		value: (v) => console.log("Success:", v),
-		error: (e) => console.error("Failed:", e),
-	}) // Side effects for both
+  .then((value) => transform(value)) // Transform success value
+  .tap((value) => console.log(value)) // Side effect on success
+  .tap({
+    value: (v) => console.log("Success:", v),
+    error: (e) => console.error("Failed:", e),
+  }) // Side effects for both
 ```
 
 ### Error Handling
@@ -202,14 +202,14 @@ program.catch("NotFound", (error) => null)
 
 // Catch multiple errors by name
 program.catch({
-	NotFound: (error) => null,
-	Timeout: (error) => retryLater(),
+  NotFound: (error) => null,
+  Timeout: (error) => retryLater(),
 })
 
 // Handle thrown exceptions at creation
 const program = x.try({
-	try: (ctx) => JSON.parse(invalidJson),
-	catch: (e) => new ParseError({ cause: e }),
+  try: (ctx) => JSON.parse(invalidJson),
+  catch: (e) => new ParseError({ cause: e }),
 })
 // Type: Program<T, ParseError, never>
 ```
@@ -218,11 +218,11 @@ const program = x.try({
 
 ```typescript
 program
-	.retry(3) // Retry up to 3 times
-	.retry({ times: 3, delay: 1000 }) // With delay between retries
-	.retry({ times: 3, while: (e) => isRetryable(e) }) // Conditional retry
-	.timeout(5000) // Timeout after 5 seconds
-	.timeout(5000, () => new TimeoutError()) // Custom timeout error
+  .retry(3) // Retry up to 3 times
+  .retry({ times: 3, delay: 1000 }) // With delay between retries
+  .retry({ times: 3, while: (e) => isRetryable(e) }) // Conditional retry
+  .timeout(5000) // Timeout after 5 seconds
+  .timeout(5000, () => new TimeoutError()) // Custom timeout error
 ```
 
 ### Dependencies
@@ -235,9 +235,9 @@ program.provide(myProvider) // Satisfy requirements
 
 ```typescript
 program.finally(() => {
-	// Runs regardless of success or failure
-	cleanup()
-	metrics.record()
+  // Runs regardless of success or failure
+  cleanup()
+  metrics.record()
 })
 ```
 
