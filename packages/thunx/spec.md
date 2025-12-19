@@ -1,12 +1,16 @@
 # `thunx` Specification
 
-> Lean, type-safe error handling and dependency injection with a `Promise`-like API.
+> Lean, type-safe error handling and dependency injection with a Promise-like API.
 
 ---
 
 ## Introduction
 
-`thunx` provides type-safe error handling and dependency injection through a familiar `Promise`-like interface called a `Thunk`. Thunks are lazy computations that track:
+`thunx` provides type-safe error handling and dependency injection through a familiar Promise-like interface called a Thunk.
+
+Thunks differ from Promises in two key ways:
+
+**1. Richer types** — `Promise<T>` only tracks the success type. `Thunk<T, E, R>` tracks three channels:
 
 - `T` — success value type
 - `E` — possible error type
@@ -18,9 +22,18 @@ Thunk<User, FetchError, UserService>
 //    T     E           R
 ```
 
-Unlike `Promises` which are _eagerly_ executed, `Thunks` are zero-argument functions that are _lazily_ executed.
+**2. Lazy execution** — Promises execute eagerly. Thunks are nullary functions that defer computation until explicitly run.
 
-Thunks defer execution, enabling composition, observation, instrumentation, and resilience through retryability.
+```ts
+// Promise — executes immediately
+const promise = fetch(url) // already running
+
+// Thunk — defers execution
+const thunk = Thunk.try(() => fetch(url)) // not running yet
+await Thunk.run(thunk) // executes now
+```
+
+Lazy execution enables composition, observation, instrumentation, and resilience through retryability.
 
 ### Design Principles
 
@@ -78,7 +91,7 @@ Thunk.try((ctx) => fetch(url, { signal: ctx.signal }))
 
 #### `Thunk.gen`
 
-Composes `Thunks` using generator syntax. Yield `Thunks`, `Tokens`, or `TypedErrors`.
+Composes `Thunks` using generator syntax. Yield `Thunks`, `Tokens` and `TypedErrors`.
 
 ```ts
 Thunk.gen(function* () {
@@ -95,10 +108,10 @@ Thunk.gen(function* () {
 Runs `Thunks` concurrently and collects all results.
 
 ```ts
-Thunk.all([fetchUser(id), fetchPosts(id)])
+Thunk.all([fetchUser(id), fetchPosts(id)]) // array
 // Thunk<[User, Post[]], UserError | PostError, never>
 
-Thunk.all({ user: UserService, config: ConfigService })
+Thunk.all({ user: UserService, config: ConfigService }) // object
 // Thunk<{ user: ..., config: ... }, never, UserService | ConfigService>
 
 Thunk.all(thunks, { concurrency: 5 })
@@ -124,7 +137,7 @@ Thunk.race([fetchData(), timeout(5000)])
 
 #### `Thunk.run`
 
-Executes a `Thunk`. Requires `R = never`.
+Executes `Thunk<T, E, R>` and returns `Promise<Result<T, E>>`. Requires `R = never`.
 
 ```ts
 const result = await Thunk.run(thunk) // Result<T, E>
@@ -183,7 +196,7 @@ thunk.catch({
   NotFoundError: (error) => null,
   TimeoutError: (error) => new RetryError(),
 })
-// Thunk<T | null, Exclude<E, ...> | RetryError, R>
+// Thunk<T | null, Exclude<E, NotFoundError | TimeoutError> | RetryError, R>
 ```
 
 #### `thunk.finally`
@@ -200,20 +213,23 @@ Applies a transformation function.
 
 ```ts
 const withRetry = <T, E, R>(t: Thunk<T, E, R>) => t.retry(3)
-thunk.pipe(withRetry)
+const orNull = <T, E, R>(t: Thunk<T, E, R>) => t.catch((error) => null)
+
+thunk.pipe(withRetry).pipe(orNull) // Thunk<T | null, never, R>
 ```
 
 #### `thunk.tap`
 
-Runs side effects without changing the value.
+Executes side effects, passing `T` through unchanged. Callbacks may return `Thunks`, merging their `E` and `R` channels.
 
 ```ts
 thunk.tap((value) => console.log(value))
 
 thunk.tap({
-  value: (value) => console.log(value),
-  error: (error) => console.error(error),
+  value: (value) => logToAnalytics(value), // Thunk<void, AnalyticsError, AnalyticsService>
+  error: (error) => logToSentry(error), // Thunk<string, SentryError, SentryService>
 })
+// Thunk<T, E | AnalyticsError | SentryError, R | AnalyticsService | SentryService>
 ```
 
 #### `thunk.span`
@@ -225,15 +241,30 @@ thunk.span("fetchUser", { userId: id })
 // Thunk<T, E, R | Tracer>
 ```
 
-> The `Tracer` token must be provided via a `Provider`. See the Tracer section for implementation details.
+> The `Tracer` token must be provided via a `Provider`. See [`Tracer`](#7-tracer) for implementation details.
 
 #### `thunk.retry`
 
 Retries on failure.
 
 ```ts
+// Simple — retry 3 times with no delay
 thunk.retry(3)
-thunk.retry({ times: 3, delay: 1000, backoff: "exponential" })
+
+// Fixed delay — 1 second between retries
+thunk.retry({ times: 3, delay: 1000 })
+
+// Exponential backoff — 1s, 2s, 4s
+thunk.retry({
+  times: 3,
+  delay: (attempt) => 1000 * 2 ** attempt,
+})
+
+// Conditional — only retry network errors
+thunk.retry({
+  times: 3,
+  while: (error) => error.name === "NetworkError",
+})
 ```
 
 #### `thunk.timeout`
@@ -418,6 +449,56 @@ The return type of `Thunk.run`.
 type Result<T, E> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: E }
+```
+
+---
+
+## 7. `Tracer`
+
+The `Tracer` token enables observability via the `thunk.span()` method. Provide an implementation to capture spans during execution.
+
+### Definition
+
+```ts
+class Tracer extends Token("Tracer")<{
+  readonly span: <T>(
+    name: string,
+    attributes: Record<string, unknown>,
+    fn: () => Promise<T>,
+  ) => Promise<T>
+}> {}
+```
+
+### Usage
+
+```ts
+// Add a span to a thunk
+fetchUser(id).span("fetchUser", { userId: id })
+// Thunk<User, FetchError, Tracer>
+```
+
+### Providing
+
+```ts
+// Simple console tracer
+const consoleTracer = Provider.provide(Tracer, () => ({
+  span: async (name, attributes, fn) => {
+    console.log(`[${name}] start`, attributes)
+    const result = await fn()
+    console.log(`[${name}] end`)
+    return result
+  },
+}))
+
+// OpenTelemetry tracer
+const otelTracer = Provider.provide(Tracer, () => ({
+  span: (name, attributes, fn) =>
+    tracer.startActiveSpan(name, { attributes }, (span) =>
+      fn().finally(() => span.end()),
+    ),
+}))
+
+thunk.provide(otelTracer)
 ```
 
 ---
