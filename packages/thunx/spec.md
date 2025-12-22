@@ -289,41 +289,32 @@ thunk.provide(appProvider)
 
 ## 2. `TypedError`
 
-All errors in `E` are `TypedError` instances with a typed `name` for discrimination.
+All errors in channel `E` are `TypedError` instances with a typed `name` for discrimination.
 
 ### Definition
+
+`TypedError(name)<OptionalShape>` returns a base class parameterized by a props type:
 
 ```ts
 class NotFoundError extends TypedError("NotFoundError")<{
   readonly resource: string
 }> {}
-```
 
-### Usage
+// Payload-less errors omit the type parameter
+class UnauthorizedError extends TypedError("UnauthorizedError") {}
 
-Return or yield to fail — no `throw` needed:
-
-```ts
-thunk.then((value) => {
-  if (!value) return new NotFoundError({ resource: "user" })
-  return value
-})
-
-Thunk.gen(function* () {
-  const user = yield* fetchUser(id)
-  if (!user) yield* new NotFoundError({ resource: "user" })
-  return user
-})
+// Use cause to wrap underlying errors
+new FetchError({ resource: "/users", cause: error })
 ```
 
 ### Built-in Errors
 
-| Error             | Purpose                            |
-| ----------------- | ---------------------------------- |
-| `UnexpectedError` | Unexpected errors                  |
-| `AggregateError`  | Collection of errors (`Thunk.any`) |
-| `TimeoutError`    | Timeout exceeded                   |
-| `AbortError`      | Cancelled operation                |
+| Error               | Payload                | Purpose                     |
+| ------------------- | ---------------------- | --------------------------- |
+| `UnexpectedError`   | `{ cause: unknown }`   | Unexpected errors (defects) |
+| `AggregateError<E>` | `{ errors: E[] }`      | Collection from `Thunk.any` |
+| `TimeoutError`      | `{ duration: number }` | Timeout exceeded            |
+| `AbortError`        | —                      | Cancelled operation         |
 
 ---
 
