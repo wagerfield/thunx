@@ -445,50 +445,35 @@ if (result.ok) {
 
 ## 7. `Tracer`
 
-The `Tracer` token enables observability via the `thunk.span()` method. Provide an implementation to capture spans during execution.
-
-### Definition
+`Tracer` is a built-in `Token` that enables observability via `thunk.span()`:
 
 ```typescript
+// Tracer Token definition
 class Tracer extends Token("Tracer") {
-  declare readonly span: <T>(
+  declare readonly span: <T, E>(
     name: string,
     attributes: Record<string, unknown>,
-    fn: () => Promise<T>,
-  ) => Promise<T>
+    fn: () => Promise<Result<T, E>>,
+  ) => Promise<Result<T, E>>
 }
-```
 
-### Usage
-
-```typescript
-// Add a span to a thunk
-fetchUser(id).span("fetchUser", { userId: id })
+// Add span to a thunk
+const thunk = fetchUser(id).span("fetchUser", { userId: id })
 // Thunk<User, FetchError, Tracer>
-```
 
-### Providing
-
-```typescript
-// Simple console tracer
-const consoleTracer = Provider.provide(Tracer, () => ({
+// Provide a Tracer implementation
+const tracerProvider = Provider.provide(Tracer, () => ({
   span: async (name, attributes, fn) => {
     console.log(`[${name}] start`, attributes)
     const result = await fn()
-    console.log(`[${name}] end`)
+    console.log(`[${name}] ${result.ok ? "ok" : "error"}`)
     return result
   },
 }))
 
-// OpenTelemetry tracer
-const otelTracer = Provider.provide(Tracer, () => ({
-  span: (name, attributes, fn) =>
-    tracer.startActiveSpan(name, { attributes }, (span) =>
-      fn().finally(() => span.end()),
-    ),
-}))
-
-thunk.provide(otelTracer)
+// Provide Tracer — subtracts from R
+thunk.provide(tracerProvider)
+// Thunk<User, FetchError, never>
 ```
 
 ---
@@ -500,20 +485,20 @@ thunk.provide(otelTracer)
 | Type         | Returns         | Adds to E | Adds to R |
 | ------------ | --------------- | --------- | --------- |
 | `Thunk`      | `T`             | `E`       | `R`       |
-| `Token`      | `TokenInstance` | —         | `Token`   |
-| `TypedError` | (fails)         | `Error`   | —         |
+| `Token`      | `TokenInstance` | `never`   | `Token`   |
+| `TypedError` | (fails)         | `Error`   | `never`   |
 
 ### Unwrapping
 
 Values returned from `then`, `catch`, or yielded in `gen`:
 
-| Input        | Value           | Error   | Requirements |
-| ------------ | --------------- | ------- | ------------ |
-| `T`          | `T`             | `never` | `never`      |
-| `Promise<T>` | `T`             | `never` | `never`      |
-| `Thunk`      | `T`             | `E`     | `R`          |
-| `Token`      | `TokenInstance` | `never` | `Token`      |
-| `TypedError` | `never`         | `Error` | `never`      |
+| Input        | Value (`T`)     | Error (`E`) | Requirements (`R`) |
+| ------------ | --------------- | ----------- | ------------------ |
+| `T`          | `T`             | `never`     | `never`            |
+| `Promise<T>` | `T`             | `never`     | `never`            |
+| `Thunk`      | `T`             | `E`         | `R`                |
+| `Token`      | `TokenInstance` | `never`     | `Token`            |
+| `TypedError` | `never`         | `Error`     | `never`            |
 
 ### Channel Accumulation
 
