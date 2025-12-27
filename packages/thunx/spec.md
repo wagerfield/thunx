@@ -130,7 +130,7 @@ else console.error(result.error)
 
 // With options
 await Thunk.run(thunk, { signal }) // pass AbortSignal
-await Thunk.run(thunk, { unwrap: true }) // throws on error, returns T
+await Thunk.run(thunk, { unwrap: true }) // returns T or throws
 ```
 
 ---
@@ -332,7 +332,7 @@ Thunk.gen(function* () {
 }) // Thunk<User, FetchError, UserService>
 ```
 
-Tokens are provided via [`Provider`](#5-provider).
+Tokens are provided via a [`Provider`](#5-provider).
 
 ---
 
@@ -358,11 +358,14 @@ The `signal` originates from `Thunk.run` options. The `get` method is available 
 
 ## 5. `Provider`
 
-Providers bundle `Token` implementations with type `Provider<C, E>` where `C = Context` and `E = Errors`.
+Providers supply `Token` implementations with type `Provider<S, E>` where:
 
-Chained `.provide` calls accumulate tokens in `C`, errors in `E`, and can access prior tokens via `ctx.get(Token)`.
+- `S` — supplied token types
+- `E` — error types
 
-Like Thunks, Providers are immutable; each method returns a new `Provider` instance.
+Chained `.provide` calls accumulate tokens in `S`, errors in `E`, and can access prior tokens via `ctx.get(Token)`.
+
+Like Thunks, Providers are immutable: each method returns a new `Provider` instance.
 
 ### Static Methods
 
@@ -385,8 +388,7 @@ Like Thunks, Providers are immutable; each method returns a new `Provider` insta
 ```typescript
 // Create with static method
 const configProvider = Provider.provide(ConfigService, () => ({
-  apiUrl: "https://api.example.com",
-  apiToken: "super_secret_token",
+  databaseUrl: "postgres://user:password@host:5432/database",
 }))
 // Provider<ConfigService, never>
 
@@ -396,7 +398,7 @@ const databaseProvider = configProvider.provide(DatabaseService, (ctx) =>
 )
 // Provider<ConfigService | DatabaseService, DatabaseError>
 
-// Provide to thunk — subtracts C from D, merges E
+// Provide to thunk — subtracts S from D, merges E
 thunk.provide(databaseProvider)
 // Thunk<T, E | ConnectionError, Exclude<D, ConfigService | DatabaseService>>
 
