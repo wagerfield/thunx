@@ -4,16 +4,16 @@ Thunx provides type-safe error handling and dependency injection through a famil
 
 Thunks differ from Promises in two key ways:
 
-**1. Richer types** — `Promise<T>` only tracks the success type. `Thunk<T, E, D>` tracks three channels:
+**1. Richer types** — `Promise<T>` only tracks the success type. `Thunk<T, E, R>` tracks three channels:
 
 - `T` — success types
 - `E` — error types
-- `D` — dependency types (must be `never` to run)
+- `R` — requirement types (must be `never` to run)
 
 ```typescript
 Thunk<User, FetchError, UserService>
 //    ↑     ↑           ↑
-//    T     E           D
+//    T     E           R
 ```
 
 **2. Lazy execution** — Promises execute eagerly. Thunks are nullary functions that defer computation until explicitly run.
@@ -34,7 +34,7 @@ Lazy execution enables composition, observation, and resilience through retryabi
 | Principle               | Description                                                             |
 | ----------------------- | ----------------------------------------------------------------------- |
 | **Errors as values**    | Return `TypedError` instances to fail — no `throw` statements           |
-| **Polymorphic inputs**  | Methods accept and unwrap `T \| Promise<T> \| Thunk<T, E, D>` uniformly |
+| **Polymorphic inputs**  | Methods accept and unwrap `T \| Promise<T> \| Thunk<T, E, R>` uniformly |
 | **Minimal API surface** | 6 static methods, 9 chainable instance methods                          |
 
 ---
@@ -78,7 +78,7 @@ Composes `Thunks` using generator syntax. Yield `Thunks` and `Tokens`. Return `T
 
 ```typescript
 Thunk.gen(function* () {
-  const auth = yield* AuthService // D += AuthService
+  const auth = yield* AuthService // R += AuthService
   const user = yield* fetchUser(auth.userId) // E += FetchError
   if (!user.active) return new InactiveError() // E += InactiveError
   return user // T += User
@@ -120,7 +120,7 @@ Thunk.race([fetchData(), timeout(5000)])
 
 #### `Thunk.run`
 
-Executes `Thunk<T, E, D>` and returns `Promise<Result<T, E>>`. Requires `D = never`.
+Executes `Thunk<T, E, R>` and returns `Promise<Result<T, E>>`. Requires `R = never`.
 
 ```typescript
 const result = await Thunk.run(thunk) // Result<T, E>
@@ -155,13 +155,13 @@ Transforms the success value. Return a `TypedError` to fail.
 
 ```typescript
 thunk.then((value) => value.name)
-// Thunk<string, E, D>
+// Thunk<string, E, R>
 
 thunk.then((value) => {
   if (!value) return new NotFoundError()
   return value.name
 })
-// Thunk<string, E | NotFoundError, D>
+// Thunk<string, E | NotFoundError, R>
 ```
 
 #### `thunk.catch`
@@ -170,16 +170,16 @@ Handles errors. Return a `TypedError` to re-throw.
 
 ```typescript
 thunk.catch((error) => fallback)
-// Thunk<T | Fallback, never, D>
+// Thunk<T | Fallback, never, R>
 
 thunk.catch("NotFoundError", (error) => null)
-// Thunk<T | null, Exclude<E, NotFoundError>, D>
+// Thunk<T | null, Exclude<E, NotFoundError>, R>
 
 thunk.catch({
   NotFoundError: (error) => null,
   TimeoutError: (error) => new RetryError(),
 })
-// Thunk<T | null, Exclude<E, NotFoundError | TimeoutError> | RetryError, D>
+// Thunk<T | null, Exclude<E, NotFoundError | TimeoutError> | RetryError, R>
 ```
 
 #### `thunk.finally`
@@ -195,15 +195,15 @@ thunk.finally(() => console.log("done"))
 Applies a transformation function.
 
 ```typescript
-const withRetry = <T, E, D>(t: Thunk<T, E, D>) => t.retry(3)
-const orNull = <T, E, D>(t: Thunk<T, E, D>) => t.catch((error) => null)
+const withRetry = <T, E, R>(t: Thunk<T, E, R>) => t.retry(3)
+const orNull = <T, E, R>(t: Thunk<T, E, R>) => t.catch((error) => null)
 
-thunk.pipe(withRetry).pipe(orNull) // Thunk<T | null, never, D>
+thunk.pipe(withRetry).pipe(orNull) // Thunk<T | null, never, R>
 ```
 
 #### `thunk.tap`
 
-Executes side effects, passing `T` through unchanged. Callbacks may return `Thunks`, merging their `E` and `D` channels.
+Executes side effects, passing `T` through unchanged. Callbacks may return `Thunks`, merging their `E` and `R` channels.
 
 ```typescript
 thunk.tap((value) => console.log(value))
@@ -212,7 +212,7 @@ thunk.tap({
   value: (value) => logToAnalytics(value), // Thunk<void, AnalyticsError, AnalyticsService>
   error: (error) => logToSentry(error), // Thunk<void, SentryError, SentryService>
 })
-// Thunk<T, E | AnalyticsError | SentryError, D | AnalyticsService | SentryService>
+// Thunk<T, E | AnalyticsError | SentryError, R | AnalyticsService | SentryService>
 ```
 
 #### `thunk.span`
@@ -221,7 +221,7 @@ Adds a tracing span. Requires a `Tracer` token to be provided before running.
 
 ```typescript
 thunk.span("fetchUser", { userId: id })
-// Thunk<T, E, D | Tracer>
+// Thunk<T, E, R | Tracer>
 ```
 
 > The `Tracer` token must be provided via a `Provider`. See [`Tracer`](#7-tracer) for implementation details.
@@ -256,16 +256,18 @@ Adds a timeout.
 
 ```typescript
 thunk.timeout(5000)
-// Thunk<T, E | TimeoutError, D>
+// Thunk<T, E | TimeoutError, R>
 ```
 
 #### `thunk.provide`
 
-Satisfies dependencies with a `Provider`.
+Satisfy requirements with a [`Provider`](#5-provider), merge `E` and `R` channels.
 
 ```typescript
-thunk.provide(appProvider)
-// Thunk<T, E, Exclude<D, ProvidedTokens>>
+// thunk: Thunk<T, Et, Rt>
+// provider: Provider<S, Ep, Rp>
+thunk.provide(provider)
+// Thunk<T, Et | Ep, Exclude<Rt, S> | Rp>
 ```
 
 ---
@@ -312,7 +314,7 @@ new NotFoundError({
 
 Tokens define injectable dependencies with type `Thunk<Shape, never, Token>`.
 
-Using a `Token` (via `.then()` or `yield*`) returns its `Shape` and adds `Token` to `D`.
+Using a `Token` (via `.then()` or `yield*`) returns its `Shape` and adds `Token` to `R`.
 
 ```typescript
 class UserService extends Token("UserService") {
@@ -326,7 +328,7 @@ UserService.then((service) => service.getUser(id))
 
 // Yield in generators
 Thunk.gen(function* () {
-  const service = yield* UserService // D += UserService
+  const service = yield* UserService // R += UserService
   const user = service.getUser(userId) // E += FetchError
   return user // T += User
 }) // Thunk<User, FetchError, UserService>
@@ -338,75 +340,101 @@ Tokens are provided via a [`Provider`](#5-provider).
 
 ## 4. `Context`
 
-Context is passed to `Thunk.try` and `Provider.provide` factories:
+Context is passed to `Thunk.try` and `Provider.create` factories:
 
 ```typescript
-// Thunk.try and Provider.provide static methods
 interface Context {
   readonly signal: AbortSignal
 }
-
-// Provider .provide instance method
-interface ProviderContext<C> extends Context {
-  get<T extends C>(token: TokenClass<T>): TokenInstance<T>
-}
 ```
 
-The `signal` originates from `Thunk.run` options. The `get` method is available when prior Tokens exist in the `Provider` chain.
+The `signal` originates from `Thunk.run` options.
 
 ---
 
 ## 5. `Provider`
 
-Providers supply `Token` implementations with type `Provider<S, E>` where:
+Providers supply `Token` implementations with type `Provider<S, E, R>` where:
 
-- `S` — supplied token types
+- `S` — supplied `Token` types
 - `E` — error types
-
-Chained `.provide` calls accumulate tokens in `S`, errors in `E`, and can access prior tokens via `ctx.get(Token)`.
+- `R` — required `Token` types
 
 Like Thunks, Providers are immutable: each method returns a new `Provider` instance.
 
 ### Static Methods
 
-| Method             | Description                |
-| ------------------ | -------------------------- |
-| `Provider.provide` | Create with initial token  |
-| `Provider.merge`   | Combine multiple providers |
+| Method                                 | Description                  |
+| -------------------------------------- | ---------------------------- |
+| [`Provider.create`](#providercreate)   | Create provider for a token  |
+| [`Provider.merge`](#providermerge)     | Combine providers (parallel) |
+| [`Provider.compose`](#providercompose) | Wire providers (sequential)  |
 
-### Instance Methods
+### `Provider.create`
 
-| Method     | Description                         |
-| ---------- | ----------------------------------- |
-| `.provide` | Add token (can access prior tokens) |
-| `.pick`    | Select specified tokens             |
-| `.omit`    | Exclude specified tokens            |
+Creates a `Provider` for a single `Token`. Accepts an object or a `Thunk`. If a `Thunk` is provided, its `E` and `R` channels flow to the `Provider`.
+
+```typescript
+// Static object — no requirements
+Provider.create(ConfigService, { databaseUrl: "postgres://..." })
+// Provider<ConfigService, never, never>
+
+// Thunk with dependencies — R flows from Thunk's R
+Provider.create(
+  DatabaseService,
+  Thunk.gen(function* () {
+    const config = yield* ConfigService // R += ConfigService
+    return createDatabase(config.databaseUrl)
+  }),
+)
+// Provider<DatabaseService, DatabaseError, ConfigService>
+```
+
+### `Provider.merge`
+
+Combines providers without wiring. Accumulates all channels (parallel combination).
+
+```typescript
+Provider.merge(configProvider, databaseProvider)
+// Provider<ConfigService | DatabaseService, DatabaseError, ConfigService>
+// S combined, E combined, R combined
+```
+
+### `Provider.compose`
+
+Wires providers so that one satisfies another's requirements (sequential combination). The first provider's `S` satisfies the second provider's `R`.
+
+```typescript
+Provider.compose(configProvider, dbProvider)
+// Provider<ConfigService | DatabaseService, DbError, never>
+// configProvider.S satisfies dbProvider.R → R = never
+```
 
 ### Usage
 
 ```typescript
-// Create with static method
-const configProvider = Provider.provide(ConfigService, () => ({
-  databaseUrl: "postgres://user:password@host:5432/database",
-}))
-// Provider<ConfigService, never>
+// Create discrete providers
+const configProvider = Provider.create(ConfigService, {
+  dbUrl: "postgres://user:password@host:5432/database",
+})
+// Provider<ConfigService, never, never>
 
-// Chain with instance method
-const databaseProvider = configProvider.provide(DatabaseService, (ctx) =>
-  createDatabaseService(ctx.get(ConfigService)),
+const dbProvider = Provider.create(
+  DatabaseService,
+  Thunk.gen(function* () {
+    const config = yield* ConfigService
+    return createDatabaseService(config.dbUrl)
+  }),
 )
-// Provider<ConfigService | DatabaseService, DatabaseError>
+// Provider<DatabaseService, DbError, ConfigService>
 
-// Provide to thunk — subtracts S from D, merges E
-thunk.provide(databaseProvider)
-// Thunk<T, E | ConnectionError, Exclude<D, ConfigService | DatabaseService>>
+// Compose — wire config → db
+const appProvider = Provider.compose(configProvider, dbProvider)
+// Provider<ConfigService | DatabaseService, DbError, never>
 
-// Combine providers
-const combined = Provider.merge(authProvider, userProvider)
-
-// Subset providers
-const selected = combined.pick(ConfigService, UserService)
-const excluded = combined.omit(AuthService)
+// Provide to thunk
+thunk.provide(appProvider)
+// Thunk<T, E | DbError, Exclude<R, ConfigService | DatabaseService>>
 ```
 
 ---
@@ -452,16 +480,17 @@ const thunk = fetchUser(id).span("fetchUser", { userId: id })
 // Thunk<User, FetchError, Tracer>
 
 // Provide a Tracer implementation
-const tracerProvider = Provider.provide(Tracer, () => ({
+const tracerProvider = Provider.create(Tracer, {
   span: async (name, attributes, fn) => {
     console.log(`[${name}] start`, attributes)
     const result = await fn()
     console.log(`[${name}] ${result.ok ? "ok" : "error"}`)
     return result
   },
-}))
+})
+// Provider<Tracer, never, never>
 
-// Provide Tracer — subtracts from D
+// Provide Tracer — subtracts from R
 thunk.provide(tracerProvider)
 // Thunk<User, FetchError, never>
 ```
@@ -472,9 +501,9 @@ thunk.provide(tracerProvider)
 
 ### Yieldables
 
-| Type    | Returns         | Adds to E | Adds to D |
+| Type    | Returns         | Adds to E | Adds to R |
 | ------- | --------------- | --------- | --------- |
-| `Thunk` | `T`             | `E`       | `D`       |
+| `Thunk` | `T`             | `E`       | `R`       |
 | `Token` | `TokenInstance` | `never`   | `Token`   |
 
 ### Returnables
@@ -488,11 +517,11 @@ thunk.provide(tracerProvider)
 
 Values returned from `then` or `catch`:
 
-| Input        | Value (`T`)     | Error (`E`) | Dependencies (`D`) |
+| Input        | Value (`T`)     | Error (`E`) | Requirements (`R`) |
 | ------------ | --------------- | ----------- | ------------------ |
 | `T`          | `T`             | `never`     | `never`            |
 | `Promise<T>` | `T`             | `never`     | `never`            |
-| `Thunk`      | `T`             | `E`         | `D`                |
+| `Thunk`      | `T`             | `E`         | `R`                |
 | `Token`      | `TokenInstance` | `never`     | `Token`            |
 | `TypedError` | `never`         | `Error`     | `never`            |
 
@@ -500,14 +529,18 @@ Values returned from `then` or `catch`:
 
 ```typescript
 a.then(() => b)
-// Thunk<Tb, Ea | Eb, Da | Db>
+// Thunk<Tb, Ea | Eb, Ra | Rb>
 ```
 
-### Providing Removes from D
+### Providing
 
 ```typescript
-thunk.provide(partialProvider) // D -= provided tokens
-thunk.provide(fullProvider) // D = never → runnable
+thunk.provide(provider)
+// Thunk<T, E | Ep, Exclude<R, S> | Rp>
+// where Provider<S, Ep, Rp>
+
+thunk.provide(partialProvider) // R -= S, R += Rp
+thunk.provide(fullProvider) // R = never → runnable
 ```
 
 ---
@@ -532,13 +565,13 @@ const getUser = (id: string) =>
 // Thunk<User, NotFoundError, UserService>
 
 // Provider
-const provider = Provider.provide(UserService, () => ({
+const provider = Provider.create(UserService, {
   getUser: (id) =>
     Thunk.try({
       try: () => fetchUser(id),
       catch: (error) => new NotFoundError({ resource: "user", id }),
     }),
-}))
+})
 
 // Execute
 const result = await Thunk.run(getUser("123").provide(provider))
@@ -556,8 +589,8 @@ if (result.ok) {
 
 | Concept           | Effect              | Thunx                     |
 | ----------------- | ------------------- | ------------------------- |
-| Core type         | `Effect<A, E, R>`   | `Thunk<T, E, D>`          |
-| Lift value        | `Effect.succeed`    | `Thunk.from`              |
+| Core type         | `Effect<A, E, R>`   | `Thunk<T, E, R>`          |
+| Dependency type   | `Layer<Out, E, In>` | `Provider<S, E, R>`       |
 | Create from thunk | `Effect.try`        | `Thunk.try`               |
 | Fail              | `Effect.fail`       | `return new TypedError()` |
 | Transform         | `Effect.andThen`    | `thunk.then`              |
@@ -566,3 +599,6 @@ if (result.ok) {
 | Run               | `Effect.runPromise` | `Thunk.run`               |
 | Generator syntax  | `Effect.gen`        | `Thunk.gen`               |
 | Service access    | `yield* Tag`        | `yield* Token`            |
+| Create layer      | `Layer.succeed`     | `Provider.create`         |
+| Merge layers      | `Layer.merge`       | `Provider.merge`          |
+| Compose layers    | `Layer.provide`     | `Provider.compose`        |
