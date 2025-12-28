@@ -6,9 +6,9 @@ Thunks differ from Promises in two key ways:
 
 **1. Richer types** — `Promise<T>` only tracks the success type. `Thunk<T, E, R>` tracks three channels:
 
-- `T` — success types
-- `E` — error types
-- `R` — requirement types (must be `never` to run)
+- `T` — success value types
+- `E` — failure error types
+- `R` — required dependency types (must be `never` to run)
 
 ```typescript
 Thunk<User, FetchError, UserService>
@@ -35,7 +35,7 @@ Lazy execution enables composition, observation, and resilience through retryabi
 | ----------------------- | ----------------------------------------------------------------------- |
 | **Errors as values**    | Return `TypedError` instances to fail — no `throw` statements           |
 | **Polymorphic inputs**  | Methods accept and unwrap `T \| Promise<T> \| Thunk<T, E, R>` uniformly |
-| **Minimal API surface** | 6 static methods, 9 chainable instance methods                          |
+| **Minimal API surface** | 7 static methods, 9 chainable instance methods                          |
 
 ---
 
@@ -43,14 +43,15 @@ Lazy execution enables composition, observation, and resilience through retryabi
 
 ### 1.1 Static Methods
 
-| Method                     | Description                  |
-| -------------------------- | ---------------------------- |
-| [`Thunk.try`](#thunktry)   | Create from factory          |
-| [`Thunk.gen`](#thunkgen)   | Compose via generators       |
-| [`Thunk.all`](#thunkall)   | Concurrent — collect all     |
-| [`Thunk.any`](#thunkany)   | Concurrent — first success   |
-| [`Thunk.race`](#thunkrace) | Concurrent — first to settle |
-| [`Thunk.run`](#thunkrun)   | Execute thunk                |
+| Method                       | Description                  |
+| ---------------------------- | ---------------------------- |
+| [`Thunk.try`](#thunktry)     | Create from factory          |
+| [`Thunk.gen`](#thunkgen)     | Compose via generators       |
+| [`Thunk.delay`](#thunkdelay) | Delay execution              |
+| [`Thunk.all`](#thunkall)     | Concurrent — collect all     |
+| [`Thunk.any`](#thunkany)     | Concurrent — first success   |
+| [`Thunk.race`](#thunkrace)   | Concurrent — first to settle |
+| [`Thunk.run`](#thunkrun)     | Execute thunk                |
 
 #### `Thunk.try`
 
@@ -86,6 +87,18 @@ Thunk.gen(function* () {
 // Thunk<User, FetchError | InactiveError, AuthService>
 ```
 
+#### `Thunk.delay`
+
+Creates a `Thunk` that resolves after a delay. Respects the abort signal.
+
+```typescript
+Thunk.delay(1000)
+// Thunk<void, never, never>
+
+Thunk.delay(1000, value)
+// Thunk<T, never, never>
+```
+
 #### `Thunk.all`
 
 Runs `Thunks` concurrently and collects all results.
@@ -114,8 +127,8 @@ Thunk.any([fetchFromCache(id), fetchFromDatabase(id)])
 Returns first to settle (success or failure).
 
 ```typescript
-Thunk.race([fetchData(), timeout(5000)])
-// Thunk<Data, FetchError | TimeoutError, never>
+Thunk.race([fetchFromPrimary(id), fetchFromReplica(id)])
+// Thunk<User, PrimaryError | ReplicaError, never>
 ```
 
 #### `Thunk.run`
@@ -356,9 +369,9 @@ The `signal` originates from `Thunk.run` options.
 
 Providers supply `Token` implementations with type `Provider<S, E, R>` where:
 
-- `S` — supplied `Token` types
+- `S` — supplied dependency types
 - `E` — error types
-- `R` — required `Token` types
+- `R` — required dependency types
 
 Like Thunks, Providers are immutable: each method returns a new `Provider` instance.
 
@@ -592,6 +605,7 @@ if (result.ok) {
 | Core type         | `Effect<A, E, R>`   | `Thunk<T, E, R>`          |
 | Dependency type   | `Layer<Out, E, In>` | `Provider<S, E, R>`       |
 | Create from thunk | `Effect.try`        | `Thunk.try`               |
+| Delay             | `Effect.sleep`      | `Thunk.delay`             |
 | Fail              | `Effect.fail`       | `return new TypedError()` |
 | Transform         | `Effect.andThen`    | `thunk.then`              |
 | Handle errors     | `Effect.catchTag`   | `thunk.catch`             |
