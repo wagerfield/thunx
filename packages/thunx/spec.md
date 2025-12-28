@@ -6,9 +6,9 @@ Thunks differ from Promises in two key ways:
 
 **1. Richer types** — `Promise<T>` only tracks the success type. `Thunk<T, E, R>` tracks three channels:
 
-- `T` — success types
-- `E` — error types
-- `R` — required dependency types (must be `never` to run)
+- `T` — success type
+- `E` — error type
+- `R` — required dependency type (must be `never` to run)
 
 ```typescript
 Thunk<User, FetchError, UserService>
@@ -164,7 +164,7 @@ await Thunk.run(thunk, { unwrap: true }) // returns T or throws
 
 #### `thunk.then`
 
-Transforms the success value. Return a `TypedError` to fail.
+Transforms the success value. Return a `Thunk` to chain, or a `TypedError` to fail.
 
 ```typescript
 thunk.then((value) => value.name)
@@ -175,15 +175,21 @@ thunk.then((value) => {
   return value.name
 })
 // Thunk<string, E | NotFoundError, R>
+
+thunk.then((value) => fetchDetails(value.id))
+// Thunk<Details, E | FetchError, R | DetailsService>
 ```
 
 #### `thunk.catch`
 
-Handles errors. Return a `TypedError` to re-throw.
+Handles errors. Return a `Thunk` to chain, or a `TypedError` to re-throw.
 
 ```typescript
 thunk.catch((error) => fallback)
 // Thunk<T | Fallback, never, R>
+
+thunk.catch((error) => fetchFallback())
+// Thunk<T | Fallback, FetchError, R | FallbackService>
 
 thunk.catch("NotFoundError", (error) => null)
 // Thunk<T | null, Exclude<E, NotFoundError>, R>
@@ -201,6 +207,7 @@ Runs regardless of outcome.
 
 ```typescript
 thunk.finally(() => console.log("done"))
+// Thunk<T, E, R>
 ```
 
 #### `thunk.pipe`
@@ -211,7 +218,8 @@ Applies a transformation function.
 const withRetry = <T, E, R>(t: Thunk<T, E, R>) => t.retry(3)
 const orNull = <T, E, R>(t: Thunk<T, E, R>) => t.catch((error) => null)
 
-thunk.pipe(withRetry).pipe(orNull) // Thunk<T | null, never, R>
+thunk.pipe(withRetry).pipe(orNull)
+// Thunk<T | null, never, R>
 ```
 
 #### `thunk.tap`
@@ -347,7 +355,9 @@ Thunk.gen(function* () {
 }) // Thunk<User, FetchError, UserService>
 ```
 
-Tokens are provided via a [`Provider`](#4-provider).
+The `declare` keyword defines the `Shape` without generating runtime code.
+
+`Token` implementations are supplied via a [`Provider`](#4-provider).
 
 ---
 
@@ -355,9 +365,9 @@ Tokens are provided via a [`Provider`](#4-provider).
 
 Providers supply `Token` implementations with type `Provider<P, E, R>` where:
 
-- `P` — provided dependency types
-- `E` — error types
-- `R` — required dependency types
+- `P` — provided dependency type
+- `E` — error type
+- `R` — required dependency type
 
 Like Thunks, Providers are immutable: each method returns a new `Provider` instance.
 
@@ -404,9 +414,9 @@ Provider.merge(configProvider, databaseProvider)
 Wires providers so that one satisfies another's requirements (sequential combination). The first provider's `P` satisfies the second provider's `R`.
 
 ```typescript
-Provider.compose(configProvider, dbProvider)
-// Provider<ConfigService | DatabaseService, DbError, never>
-// configProvider.P satisfies dbProvider.R → R = never
+Provider.compose(configProvider, databaseProvider)
+// Provider<ConfigService | DatabaseService, DatabaseError, never>
+// configProvider.P satisfies databaseProvider.R → R = never
 ```
 
 ### Usage
@@ -414,26 +424,26 @@ Provider.compose(configProvider, dbProvider)
 ```typescript
 // Create discrete providers
 const configProvider = Provider.create(ConfigService, {
-  dbUrl: "postgres://user:password@host:5432/database",
+  databaseUrl: "postgres://user:password@host:5432/database",
 })
 // Provider<ConfigService, never, never>
 
-const dbProvider = Provider.create(
+const databaseProvider = Provider.create(
   DatabaseService,
   Thunk.gen(function* () {
     const config = yield* ConfigService
-    return createDatabaseService(config.dbUrl)
+    return createDatabaseService(config.databaseUrl)
   }),
 )
-// Provider<DatabaseService, DbError, ConfigService>
+// Provider<DatabaseService, DatabaseError, ConfigService>
 
-// Compose — wire config → db
-const appProvider = Provider.compose(configProvider, dbProvider)
-// Provider<ConfigService | DatabaseService, DbError, never>
+// Compose — wire config → database
+const appProvider = Provider.compose(configProvider, databaseProvider)
+// Provider<ConfigService | DatabaseService, DatabaseError, never>
 
 // Provide to thunk
 thunk.provide(appProvider)
-// Thunk<T, E | DbError, Exclude<R, ConfigService | DatabaseService>>
+// Thunk<T, E | DatabaseError, Exclude<R, ConfigService | DatabaseService>>
 ```
 
 ---
