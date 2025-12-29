@@ -72,7 +72,9 @@ Thunk.of(user)
 
 #### `Thunk.try`
 
-Creates a `Thunk` from a factory with optional error handling. The factory receives an `AbortSignal` for cancellation and can return `T`, `Promise<T>`, or `Thunk<T, E, R>` — all unwrapped.
+Creates a `Thunk` from a factory with optional error handling.
+
+The factory receives an `AbortSignal` and can return `T`, `Promise<T>`, or `Thunk<T, E, R>` — all unwrapped.
 
 ```typescript
 Thunk.try(() => 123)
