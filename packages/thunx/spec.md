@@ -29,7 +29,9 @@ await Thunk.run(thunk) // executes now
 
 Lazy execution enables composition, observation, and resilience through retryability.
 
-## Design Principles
+## Foundations
+
+Three ideas shape the API:
 
 | Principle               | Description                                                             |
 | ----------------------- | ----------------------------------------------------------------------- |
