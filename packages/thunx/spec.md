@@ -81,13 +81,10 @@ Thunk.try(() => 123)
 // Thunk<number, never, never>
 
 Thunk.try({
-  try: () => fetch(url),
+  try: (signal) => fetch(url, { signal }),
   catch: (error) => new FetchError({ cause: error }),
 })
 // Thunk<Response, FetchError, never>
-
-Thunk.try((signal) => fetch(url, { signal }))
-// Thunk<Response, never, never>
 ```
 
 Without `catch`, thrown errors are wrapped in an `UnexpectedError` (not added to `E`).
