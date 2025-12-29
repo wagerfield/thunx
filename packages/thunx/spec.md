@@ -97,6 +97,9 @@ Thunk.delay(1000)
 
 Thunk.delay(1000, value)
 // Thunk<T, never, never>
+
+Thunk.delay(1000, thunk)
+// Thunk<T, E, R>
 ```
 
 #### `Thunk.all`
@@ -350,14 +353,14 @@ UserService.then((service) => service.getUser(id))
 // Yield in generators
 Thunk.gen(function* () {
   const service = yield* UserService // R += UserService
-  const user = service.getUser(userId) // E += FetchError
+  const user = yield* service.getUser(userId) // E += FetchError
   return user // T += User
 }) // Thunk<User, FetchError, UserService>
 ```
 
 The `declare` keyword defines the `Shape` without generating runtime code.
 
-`Token` implementations are supplied via a [`Provider`](#4-provider).
+Implementations are supplied via a [`Provider`](#4-provider).
 
 ---
 
@@ -381,7 +384,7 @@ Like Thunks, Providers are immutable: each method returns a new `Provider` insta
 
 ### `Provider.create`
 
-Creates a `Provider` for a `Token`. Accepts an object or `Thunk` supplying the implementation. If a `Thunk` is provided, its `E` and `R` channels flow to the `Provider`.
+Creates a `Provider` for a `Token`. Accepts an object or `Thunk` providing the implementation. If a `Thunk` is passed, its `E` and `R` channels flow to the `Provider`.
 
 ```typescript
 // Static object — no requirements
@@ -439,7 +442,7 @@ const databaseProvider = Provider.create(
 )
 // Provider<DatabaseService, DatabaseError, ConfigService>
 
-// Inject — wire config → database
+// Inject ConfigService into DatabaseService
 const appProvider = Provider.inject(configProvider, databaseProvider)
 // Provider<ConfigService | DatabaseService, DatabaseError, never>
 
@@ -598,19 +601,19 @@ if (result.ok) {
 
 ## Appendix: Comparison with Effect
 
-| Concept           | Effect              | Thunx                     |
-| ----------------- | ------------------- | ------------------------- |
-| Core type         | `Effect<A, E, R>`   | `Thunk<T, E, R>`          |
-| Dependency type   | `Layer<Out, E, In>` | `Provider<P, E, R>`       |
-| Create from thunk | `Effect.try`        | `Thunk.try`               |
-| Delay             | `Effect.sleep`      | `Thunk.delay`             |
-| Fail              | `Effect.fail`       | `return new TypedError()` |
-| Transform         | `Effect.andThen`    | `thunk.then`              |
-| Handle errors     | `Effect.catchTag`   | `thunk.catch`             |
-| Side effects      | `Effect.tap`        | `thunk.tap`               |
-| Run               | `Effect.runPromise` | `Thunk.run`               |
-| Generator syntax  | `Effect.gen`        | `Thunk.gen`               |
-| Service access    | `yield* Tag`        | `yield* Token`            |
-| Create layer      | `Layer.succeed`     | `Provider.create`         |
-| Merge layers      | `Layer.merge`       | `Provider.merge`          |
-| Compose layers    | `Layer.provide`     | `Provider.inject`         |
+| Concept           | Effect               | Thunx                     |
+| ----------------- | -------------------- | ------------------------- |
+| Core type         | `Effect<A, E, R>`    | `Thunk<T, E, R>`          |
+| Dependency type   | `Layer<Out, E, In>`  | `Provider<P, E, R>`       |
+| Create from thunk | `Effect.try`         | `Thunk.try`               |
+| Delay             | `Effect.sleep`       | `Thunk.delay`             |
+| Fail              | `Effect.fail`        | `return new TypedError()` |
+| Transform         | `Effect.andThen`     | `thunk.then`              |
+| Handle errors     | `Effect.catchTag`    | `thunk.catch`             |
+| Side effects      | `Effect.tap`         | `thunk.tap`               |
+| Run               | `Effect.runPromise`  | `Thunk.run`               |
+| Generator syntax  | `Effect.gen`         | `Thunk.gen`               |
+| Service access    | `yield* Tag`         | `yield* Token`            |
+| Create layer      | `Layer.succeed`      | `Provider.create`         |
+| Merge layers      | `Layer.merge`        | `Provider.merge`          |
+| Compose layers    | `Layer.provideMerge` | `Provider.inject`         |
