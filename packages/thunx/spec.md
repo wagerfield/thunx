@@ -29,15 +29,17 @@ await Thunk.run(thunk) // executes now
 
 Lazy execution enables composition, observation, and resilience through retryability.
 
-## Foundations
+## Design Principles
 
-Three ideas shape the API:
+Five principles shape the API:
 
-| Principle               | Description                                                             |
-| ----------------------- | ----------------------------------------------------------------------- |
-| **Errors as values**    | Return `TypedError` instances to fail — no `throw` statements           |
-| **Polymorphic inputs**  | Methods accept and unwrap `T \| Promise<T> \| Thunk<T, E, R>` uniformly |
-| **Minimal API surface** | 8 static methods, 9 chainable instance methods                          |
+| Principle               | Description                                                                              |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| **Errors as values**    | Type-safe error handling. Return `TypedError` instances to fail — no `throw` statements. |
+| **Lazy execution**      | Thunks defer computation until run. Enables composition, observation, and retryability.  |
+| **Minimal API surface** | 8 static methods, 9 chainable instance methods. Quick to learn, easy to remember.        |
+| **Polymorphic inputs**  | Methods accept and unwrap `T \| Promise<T> \| Thunk<T, E, R>` seamlessly.                |
+| **Immutability**        | Methods return new instances. No mutation, no side effects, predictable behavior.        |
 
 ---
 
