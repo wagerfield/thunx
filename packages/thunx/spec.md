@@ -37,7 +37,7 @@ Five principles shape the API:
 | ----------------------- | ---------------------------------------------------------------------------------------- |
 | **Errors as values**    | Type-safe error handling. Return `TypedError` instances to fail — no `throw` statements. |
 | **Lazy execution**      | Thunks defer computation until run. Enables composition, observation, and retryability.  |
-| **Minimal API surface** | 8 static methods, 9 chainable instance methods. Quick to learn, easy to remember.        |
+| **Minimal API surface** | Only 4 classes with ~20 methods combined. Quick to learn, easy to remember.              |
 | **Polymorphic inputs**  | Methods accept and unwrap `T \| Promise<T> \| Thunk<T, E, R>` seamlessly.                |
 | **Immutability**        | Methods return new instances. No mutation, no side effects, predictable behavior.        |
 
@@ -169,17 +169,16 @@ await Thunk.run(thunk, { unwrap: true }) // returns T or throws
 
 ### 1.2 Instance Methods
 
-| Method                           | Description               |
-| -------------------------------- | ------------------------- |
-| [`thunk.then`](#thunkthen)       | Transform success value   |
-| [`thunk.catch`](#thunkcatch)     | Handle errors             |
-| [`thunk.finally`](#thunkfinally) | Run regardless of outcome |
-| [`thunk.pipe`](#thunkpipe)       | Apply transformation      |
-| [`thunk.tap`](#thunktap)         | Side effects              |
-| [`thunk.span`](#thunkspan)       | Add tracing span          |
-| [`thunk.retry`](#thunkretry)     | Retry on failure          |
-| [`thunk.timeout`](#thunktimeout) | Add timeout               |
-| [`thunk.provide`](#thunkprovide) | Satisfy requirements      |
+| Method                           | Description             |
+| -------------------------------- | ----------------------- |
+| [`thunk.then`](#thunkthen)       | Transform success value |
+| [`thunk.catch`](#thunkcatch)     | Handle errors           |
+| [`thunk.pipe`](#thunkpipe)       | Apply transformation    |
+| [`thunk.tap`](#thunktap)         | Side effects            |
+| [`thunk.span`](#thunkspan)       | Add tracing span        |
+| [`thunk.retry`](#thunkretry)     | Retry on failure        |
+| [`thunk.timeout`](#thunktimeout) | Add timeout             |
+| [`thunk.provide`](#thunkprovide) | Satisfy requirements    |
 
 #### `thunk.then`
 
@@ -218,15 +217,6 @@ thunk.catch({
   TimeoutError: (error) => new RetryError(),
 })
 // Thunk<T | null, Exclude<E, NotFoundError | TimeoutError> | RetryError, R>
-```
-
-#### `thunk.finally`
-
-Runs regardless of outcome.
-
-```typescript
-thunk.finally(() => console.log("done"))
-// Thunk<T, E, R>
 ```
 
 #### `thunk.pipe`
@@ -306,7 +296,12 @@ Satisfies requirements with a [`Provider`](#4-provider), merging `E` and `R` cha
 // provider: Provider<P, Ep, Rp>
 thunk.provide(provider)
 // Thunk<T, Et | Ep, Exclude<Rt, P> | Rp>
+
+thunk.provide(p1, p2, p3)
+// Thunk<T, Et | E1 | E2 | E3, Exclude<Rt, P1 | P2 | P3> | R1 | R2 | R3>
 ```
+
+When multiple providers are passed, dependencies between them are wired automatically.
 
 ---
 
@@ -350,44 +345,61 @@ new NotFoundError({
 
 ## 3. `Token`
 
-Tokens define injectable dependencies with type `Thunk<Shape, never, Token>`.
-
-Using a `Token` (via `.then()` or `yield*`) returns its `Shape` and adds `Token` to `R`.
+Tokens define injectable dependencies. The `declare` keyword defines the `Shape` without generating runtime code.
 
 ```typescript
 class UserService extends Token("UserService") {
   declare readonly baseUrl: string
   declare readonly getUser: (id: string) => Thunk<User, FetchError, never>
 }
+```
 
-// Chain with .then()
+### Using Tokens
+
+Using a Token (via `.then()` or `yield*`) returns its `Shape` and adds `Token` to `R`.
+
+```typescript
 UserService.then((service) => service.getUser(id))
 // Thunk<User, FetchError, UserService>
 
-// Yield in generators
 Thunk.gen(function* () {
   const service = yield* UserService // R += UserService
   const user = yield* service.getUser(userId) // E += FetchError
   return user // T += User
-}) // Thunk<User, FetchError, UserService>
+})
+// Thunk<User, FetchError, UserService>
 ```
 
-The `declare` keyword defines the token `Shape` without generating runtime code.
+### Implementing Tokens
 
-Implementations are supplied via a [`Provider`](#4-provider).
+| Method                   | Description                    |
+| ------------------------ | ------------------------------ |
+| [`Token.of`](#tokenof)   | Create provider from object    |
+| [`Token.gen`](#tokengen) | Create provider from generator |
 
-### `Token.of`
+#### `Token.of`
 
-Creates a type-safe instance of a `Token`. Validates the object conforms to the declared `Shape` at compile time.
+Creates a [`Provider`](#4-provider) from an object. Validates the `Shape` at compile time.
 
 ```typescript
-class ConfigService extends Token("ConfigService") {
-  declare readonly baseUrl: string
-  declare readonly timeout: number
-}
+ConfigService.of({ databaseUrl: "postgres://...", timeout: 5000 })
+// Provider<ConfigService, never, never>
 
+ConfigService.of({ databaseUrl: "postgres://..." })
 // Property 'timeout' is missing...
-ConfigService.of({ baseUrl: "http://api.example.com" })
+```
+
+#### `Token.gen`
+
+Creates a [`Provider`](#4-provider) from a generator. Return type must match `Shape`. `E` and `R` flow from yielded Thunks and returned TypedErrors.
+
+```typescript
+DatabaseService.gen(function* () {
+  const config = yield* ConfigService // R += ConfigService
+  if (!config.databaseUrl) return new DatabaseError() // E += DatabaseError
+  return createDatabase(config.databaseUrl)
+})
+// Provider<DatabaseService, DatabaseError, ConfigService>
 ```
 
 ---
@@ -396,104 +408,85 @@ ConfigService.of({ baseUrl: "http://api.example.com" })
 
 Providers supply `Token` implementations with type `Provider<P, E, R>` where:
 
-- `P` — provided dependency type
+- `P` — provided token type
 - `E` — error type
 - `R` — required dependency type
 
-Like Thunks, Providers are immutable: each method returns a new `Provider` instance.
+Created via [`Token.of`](#tokenof) or [`Token.gen`](#tokengen). Immutable — methods return new instances.
 
-### Static Methods
+### Instance Methods
 
-| Method                                 | Description                   |
-| -------------------------------------- | ----------------------------- |
-| [`Provider.create`](#providercreate)   | Create provider for a `Token` |
-| [`Provider.merge`](#providermerge)     | Combine providers             |
-| [`Provider.provide`](#providerprovide) | Wire providers                |
+| Method                                 | Description          |
+| -------------------------------------- | -------------------- |
+| [`provider.provide`](#providerprovide) | Satisfy requirements |
+| [`provider.merge`](#providermerge)     | Combine providers    |
+| [`provider.span`](#providerspan)       | Add tracing span     |
 
-#### `Provider.create`
+#### `provider.provide`
 
-Creates a `Provider` for a `Token`. Accepts an object or `Thunk`
-
-```typescript
-// Static object
-Provider.create(ConfigService, { databaseUrl: "postgres://..." })
-// Provider<ConfigService, never, never>
-
-// Thunk — E and R flow to Provider
-Provider.create(
-  DatabaseService,
-  Thunk.gen(function* () {
-    const config = yield* ConfigService // R += ConfigService
-    return createDatabase(config.databaseUrl) // E += DatabaseError
-  }),
-)
-// Provider<DatabaseService, DatabaseError, ConfigService>
-```
-
-#### `Provider.merge`
-
-Combines providers by unioning all channels. No wiring — requirements remain unsatisfied.
+Satisfies requirements with other providers. Variadic with auto-wiring. Encapsulates — only `this.P` in output.
 
 ```typescript
-// p1: Provider<P1, E1, R1>
-// p2: Provider<P2, E2, R2>
-Provider.merge(p1, p2)
-// Provider<P1 | P2, E1 | E2, R1 | R2>
+// databaseProvider: Provider<DatabaseService, E, ConfigService | LoggerService>
+
+databaseProvider.provide(configProvider)
+// Provider<DatabaseService, E, LoggerService>
+
+databaseProvider.provide(configProvider, loggerProvider)
+// Provider<DatabaseService, E, never>
 ```
 
-Variadic — accepts multiple providers:
+#### `provider.merge`
+
+Combines providers. Variadic with auto-wiring. Exposes all — `P` channels unioned.
 
 ```typescript
-Provider.merge(p1, p2, p3)
-// Provider<P1 | P2 | P3, E1 | E2 | E3, R1 | R2 | R3>
+configProvider.merge(loggerProvider)
+// Provider<ConfigService | LoggerService, E, never>
+
+configProvider.merge(loggerProvider, cacheProvider)
+// Provider<ConfigService | LoggerService | CacheService, E, R>
 ```
 
-#### `Provider.provide`
+#### `provider.span`
 
-Wires one provider into another, satisfying dependencies. `P1` is subtracted from `R2`.
+Adds a tracing span to construction. Requires [`Tracer`](#6-tracer) to be provided.
 
 ```typescript
-// p1: Provider<P1, E1, R1>
-// p2: Provider<P2, E2, R2>
-Provider.provide(p1, p2)
-// Provider<P2, E1 | E2, R1 | Exclude<R2, P1>>
+provider.span("createDatabase", { url })
+// Provider<P, E, R | Tracer>
 ```
-
-- Only `P2` appears in output — `P1` is encapsulated
-- `P1` satisfies matching requirements in `R2`
-- `R1` merges with remaining requirements
 
 ### Usage
 
 ```typescript
-// Create providers
-const configProvider = Provider.create(ConfigService, {
+// Create providers via Token methods
+const configProvider = ConfigService.of({
   databaseUrl: "postgres://user:password@host:5432/database",
 })
 // Provider<ConfigService, never, never>
 
-const databaseProvider = Provider.create(
-  DatabaseService,
-  Thunk.gen(function* () {
-    const config = yield* ConfigService
-    return createDatabaseService(config.databaseUrl)
-  }),
-)
-// Provider<DatabaseService, DatabaseError, ConfigService>
+const loggerProvider = LoggerService.of({ level: "info" })
+// Provider<LoggerService, never, never>
 
-// Merge — union all channels
-Provider.merge(configProvider, databaseProvider)
-// Provider<ConfigService | DatabaseService, DatabaseError, ConfigService>
-// R = never | ConfigService = ConfigService (unsatisfied)
+const databaseProvider = DatabaseService.gen(function* () {
+  const config = yield* ConfigService
+  const logger = yield* LoggerService
+  return createDatabase(config.databaseUrl, logger)
+})
+// Provider<DatabaseService, never, ConfigService | LoggerService>
 
-// Provide — wire configProvider into databaseProvider
-Provider.provide(configProvider, databaseProvider)
-// Provider<DatabaseService, DatabaseError, never>
-// R = never | Exclude<ConfigService, ConfigService> = never (satisfied)
+// Merge — expose all, auto-wire
+const coreProvider = configProvider.merge(loggerProvider)
+// Provider<ConfigService | LoggerService, never, never>
+
+// Provide — encapsulate, satisfy requirements
+const dataProvider = databaseProvider.provide(coreProvider)
+// Provider<DatabaseService, never, never>
 
 // Provide to thunk
-thunk.provide(provider)
-// Thunk<T, E | Ep, Exclude<R, P> | Rp>
+thunk.provide(dataProvider)
+// Thunk<T, E, Exclude<R, DatabaseService>>
 ```
 
 ---
@@ -522,7 +515,7 @@ if (result.ok) {
 
 ## 6. `Tracer`
 
-`Tracer` is a built-in `Token` that enables observability via `thunk.span()`:
+`Tracer` is a built-in `Token` that enables observability via `thunk.span()` and `provider.span()`.
 
 ```typescript
 // Tracer Token definition
@@ -534,12 +527,12 @@ class Tracer extends Token("Tracer") {
   ) => Promise<Result<T, E>>
 }
 
-// Add span to a thunk
-const thunk = fetchUser(id).span("fetchUser", { userId: id })
+// Add span to thunk or provider
+fetchUser(id).span("fetchUser", { userId: id })
 // Thunk<User, FetchError, Tracer>
 
 // Provide a Tracer implementation
-const tracerProvider = Provider.create(Tracer, {
+const tracerProvider = Tracer.of({
   span: async (name, attributes, fn) => {
     console.log(`[${name}] start`, attributes)
     const result = await fn()
@@ -599,10 +592,15 @@ a.then(() => b)
 ```typescript
 thunk.provide(provider)
 // Thunk<T, E | Ep, Exclude<R, P> | Rp>
-// where Provider<P, Ep, Rp>
 
-thunk.provide(partialProvider) // R -= P, R += Rp
-thunk.provide(fullProvider) // R = never → runnable
+thunk.provide(p1, p2) // variadic, auto-wired
+// Thunk<T, E | E1 | E2, Exclude<R, P1 | P2> | R1 | R2>
+
+provider.provide(other) // encapsulates — only this.P in output
+// Provider<P, E | Eo, Exclude<R, Po> | Ro>
+
+provider.merge(other) // exposes all — P channels unioned
+// Provider<P | Po, E | Eo, Exclude<R | Ro, P | Po>>
 ```
 
 ---
@@ -621,22 +619,23 @@ class UserService extends Token("UserService") {
   declare readonly getUser: (id: string) => Thunk<User, NotFoundError, never>
 }
 
-// Thunk
+// Thunk — uses the token
 const getUser = (id: string) =>
   UserService.then((service) => service.getUser(id))
 // Thunk<User, NotFoundError, UserService>
 
-// Provider
-const provider = Provider.create(UserService, {
+// Provider — implements the token
+const userProvider = UserService.of({
   getUser: (id) =>
     Thunk.try({
       try: () => fetchUser(id),
       catch: (error) => new NotFoundError({ resource: "user", id }),
     }),
 })
+// Provider<UserService, never, never>
 
 // Execute
-const result = await Thunk.run(getUser("123").provide(provider))
+const result = await Thunk.run(getUser("123").provide(userProvider))
 
 if (result.ok) {
   console.log(result.value) // User
@@ -649,20 +648,22 @@ if (result.ok) {
 
 ## Appendix: Comparison with Effect
 
-| Concept           | Effect              | Thunx                     |
-| ----------------- | ------------------- | ------------------------- |
-| Core type         | `Effect<A, E, R>`   | `Thunk<T, E, R>`          |
-| Dependency type   | `Layer<Out, E, In>` | `Provider<P, E, R>`       |
-| Lift value        | `Effect.succeed`    | `Thunk.of`                |
-| Create from thunk | `Effect.try`        | `Thunk.try`               |
-| Delay             | `Effect.sleep`      | `Thunk.delay`             |
-| Fail              | `Effect.fail`       | `return new TypedError()` |
-| Transform         | `Effect.andThen`    | `thunk.then`              |
-| Handle errors     | `Effect.catchTag`   | `thunk.catch`             |
-| Side effects      | `Effect.tap`        | `thunk.tap`               |
-| Run               | `Effect.runPromise` | `Thunk.run`               |
-| Generator syntax  | `Effect.gen`        | `Thunk.gen`               |
-| Service access    | `yield* Tag`        | `yield* Token`            |
-| Create layer      | `Layer.succeed`     | `Provider.create`         |
-| Combine layers    | `Layer.merge`       | `Provider.merge`          |
-| Wire layers       | `Layer.provide`     | `Provider.provide`        |
+| Concept            | Effect              | Thunx                     |
+| ------------------ | ------------------- | ------------------------- |
+| Core type          | `Effect<A, E, R>`   | `Thunk<T, E, R>`          |
+| Dependency type    | `Layer<Out, E, In>` | `Provider<P, E, R>`       |
+| Lift value         | `Effect.succeed`    | `Thunk.of`                |
+| Create from thunk  | `Effect.try`        | `Thunk.try`               |
+| Delay              | `Effect.sleep`      | `Thunk.delay`             |
+| Fail               | `Effect.fail`       | `return new TypedError()` |
+| Transform          | `Effect.andThen`    | `thunk.then`              |
+| Handle errors      | `Effect.catchTag`   | `thunk.catch`             |
+| Side effects       | `Effect.tap`        | `thunk.tap`               |
+| Run                | `Effect.runPromise` | `Thunk.run`               |
+| Generator syntax   | `Effect.gen`        | `Thunk.gen`               |
+| Service access     | `yield* Tag`        | `yield* Token`            |
+| Service definition | `Tag` class         | `Token` class             |
+| Create layer       | `Layer.succeed`     | `Token.of`                |
+| Layer from thunk   | `Layer.effect`      | `Token.gen`               |
+| Combine layers     | `Layer.merge`       | `provider.merge`          |
+| Wire layers        | `Layer.provide`     | `provider.provide`        |
