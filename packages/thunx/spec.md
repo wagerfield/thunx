@@ -74,12 +74,14 @@ Thunk.of(user)
 
 Creates a `Thunk` from a factory with optional error handling.
 
-The factory receives an `AbortSignal` and can return `T`, `Promise<T>`, or `Thunk<T, E, R>` — all unwrapped.
+The factory receives an `AbortSignal` (from `Thunk.run`) and can return `T`, `Promise<T>`, or `Thunk<T, E, R>` — all unwrapped.
 
 ```typescript
-Thunk.try(() => 123)
-// Thunk<number, never, never>
+// Simple — signal available
+Thunk.try((signal) => fetch(url, { signal }))
+// Thunk<Response, never, never>
 
+// With error handling
 Thunk.try({
   try: (signal) => fetch(url, { signal }),
   catch: (error) => new FetchError({ cause: error }),
@@ -87,7 +89,7 @@ Thunk.try({
 // Thunk<Response, FetchError, never>
 ```
 
-Without `catch`, thrown errors are wrapped in an `UnexpectedError` (not added to `E`).
+Without `catch`, thrown errors become defects (wrapped in `UnexpectedError`, not added to `E`).
 
 #### `Thunk.gen`
 
@@ -120,25 +122,25 @@ Thunk.delay(1000, thunk)
 
 #### `Thunk.all`
 
-Runs `Thunks` concurrently and collects all results.
+Runs `Thunks` concurrently and collects all results. Accepts arrays or objects.
 
 ```typescript
-Thunk.all([fetchUser(id), fetchPosts(id)]) // array
-// Thunk<[User, Post[]], UserError | PostError, never>
+Thunk.all([fetchUser(id), fetchPosts(id)])
+// Thunk<[User, Post[]], UserError | PostError, UserService | PostService>
 
-Thunk.all({ auth: AuthService, user: UserService }) // object
-// Thunk<{ auth: ..., user: ... }, never, AuthService | UserService>
+Thunk.all({ user: fetchUser(id), posts: fetchPosts(id) })
+// Thunk<{ user: User, posts: Post[] }, UserError | PostError, UserService | PostService>
 
 Thunk.all(thunks, { concurrency: 5 })
 ```
 
 #### `Thunk.any`
 
-Returns first successful result. If all thunks fail, returns an `AggregateError` containing all errors.
+Returns first successful result. If all fail, returns an `AggregateError` containing all errors.
 
 ```typescript
 Thunk.any([fetchFromCache(id), fetchFromDatabase(id)])
-// Thunk<User, AggregateError<CacheError | DatabaseError>, ...>
+// Thunk<User, AggregateError<CacheError | DatabaseError>, CacheService | DatabaseService>
 ```
 
 #### `Thunk.race`
@@ -352,6 +354,30 @@ new NotFoundError({
 | `TimeoutError`      | `{ duration: number }` | Timeout exceeded            |
 | `AbortError`        | —                      | Cancelled operation         |
 
+### Expected vs Unexpected Errors
+
+Thunx distinguishes two error categories:
+
+- **Expected errors** — Tracked in `E`. Returned via `Result`. Handle with `.catch`.
+- **Defects** — Untracked (`UnexpectedError`). Thrown as exceptions. Indicate bugs.
+
+`Thunk.run` returns `Result<T, E>` for expected errors. Defects reject the Promise.
+
+```typescript
+// Expected — tracked in E, handled gracefully
+Thunk.try({
+  try: () => fetch(url),
+  catch: (error) => new FetchError({ cause: error }),
+})
+// Thunk<Response, FetchError, never>
+
+// Defect — not tracked, indicates a bug
+Thunk.try(() => {
+  throw new Error("unexpected")
+})
+// Thunk<T, never, never> — but will reject with UnexpectedError
+```
+
 ---
 
 ## 3. `Token`
@@ -425,6 +451,28 @@ Providers supply `Token` implementations with type `Provider<P, E, R>` where:
 
 Created via [`Token.of`](#tokenof) or [`Token.gen`](#tokengen). Immutable — methods return new instances.
 
+Provider generators run fresh each time the provider is resolved. For singleton behavior, construct the instance externally and capture it:
+
+```typescript
+// Transient — createConnection() runs on each resolution
+const databaseProvider = DatabaseService.gen(function* () {
+  return createConnection()
+})
+
+// Singleton — connection created once, shared across resolutions
+const connection = createConnection()
+const databaseProvider = DatabaseService.gen(function* () {
+  return connection
+})
+```
+
+Alternatively, [`Token.of`](#tokenof) is inherently singleton since it receives an already-constructed object:
+
+```typescript
+const connection = createConnection()
+const databaseProvider = DatabaseService.of(connection)
+```
+
 ### Instance Methods
 
 | Method                                 | Description          |
@@ -452,8 +500,12 @@ databaseProvider.provide(configProvider, loggerProvider)
 Combines providers. Variadic with auto-wiring. Exposes all — `P` channels unioned.
 
 ```typescript
+// configProvider: Provider<ConfigService, never, never>
+// loggerProvider: Provider<LoggerService, never, ConfigService>
+
 configProvider.merge(loggerProvider)
-// Provider<ConfigService | LoggerService, E, never>
+// Provider<ConfigService | LoggerService, never, never>
+// ↑ ConfigService in loggerProvider.R satisfied by configProvider.P
 
 configProvider.merge(loggerProvider, cacheProvider)
 // Provider<ConfigService | LoggerService | CacheService, E, R>
@@ -538,14 +590,40 @@ thunk.provide(tracerProvider)
 
 ---
 
+## 6. Cancellation
+
+Thunks support cooperative cancellation via `AbortSignal`.
+
+```typescript
+const controller = new AbortController()
+
+// Pass signal to Thunk.run
+Thunk.run(thunk, { signal: controller.signal })
+
+// Signal is available in Thunk.try factories
+Thunk.try((signal) => fetch(url, { signal }))
+
+// Abort cancels the operation
+controller.abort()
+```
+
+When aborted:
+
+- In-flight operations receive the signal and should abort
+- `Thunk.run` rejects with `AbortError`
+- `.retry` stops retrying on abort
+- `.timeout` uses `AbortSignal.timeout()` internally
+
+---
+
 ## Type Inference
 
 ### Yieldables
 
-| Type    | Returns         | Adds to E | Adds to R |
-| ------- | --------------- | --------- | --------- |
-| `Thunk` | `T`             | `E`       | `R`       |
-| `Token` | `TokenInstance` | `never`   | `Token`   |
+| Type    | Returns | Adds to E | Adds to R |
+| ------- | ------- | --------- | --------- |
+| `Thunk` | `T`     | `E`       | `R`       |
+| `Token` | `Shape` | `never`   | `Token`   |
 
 ### Returnables
 
@@ -561,13 +639,13 @@ Values returned from `Thunk.try`, `Thunk.gen`, `thunk.then`, `thunk.catch`, or `
 
 Values returned from `then` or `catch`:
 
-| Input        | Value (`T`)     | Error (`E`) | Requirements (`R`) |
-| ------------ | --------------- | ----------- | ------------------ |
-| `T`          | `T`             | `never`     | `never`            |
-| `Promise<T>` | `T`             | `never`     | `never`            |
-| `Thunk`      | `T`             | `E`         | `R`                |
-| `Token`      | `TokenInstance` | `never`     | `Token`            |
-| `TypedError` | `never`         | `Error`     | `never`            |
+| Input        | Value (`T`) | Error (`E`) | Requirements (`R`) |
+| ------------ | ----------- | ----------- | ------------------ |
+| `T`          | `T`         | `never`     | `never`            |
+| `Promise<T>` | `T`         | `never`     | `never`            |
+| `Thunk`      | `T`         | `E`         | `R`                |
+| `Token`      | `Shape`     | `never`     | `Token`            |
+| `TypedError` | `never`     | `Error`     | `never`            |
 
 ### Channel Accumulation
 
