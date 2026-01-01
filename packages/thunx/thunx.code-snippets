@@ -1,0 +1,261 @@
+{
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Thunx Code Snippets for VS Code / Cursor
+  // ─────────────────────────────────────────────────────────────────────────────
+  //
+  // To use these snippets:
+  // 1. Copy this file to your project's .vscode/ folder, OR
+  // 2. Open Command Palette → "Preferences: Configure User Snippets" → Select TypeScript
+  //
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // TypedError
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  "TypedError (without properties)": {
+    "prefix": ["thunx-error", "typed-error"],
+    "description": "Create a TypedError class without custom properties",
+    "body": ["class ${1:Name}Error extends TypedError(\"${1:Name}Error\") {}"]
+  },
+
+  "TypedError (with properties)": {
+    "prefix": ["thunx-error-props", "typed-error-props"],
+    "description": "Create a TypedError class with custom properties",
+    "body": [
+      "class ${1:Name}Error extends TypedError(\"${1:Name}Error\")<{",
+      "  readonly ${2:property}: ${3:type}",
+      "}> {}"
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Token
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  "Token": {
+    "prefix": ["thunx-token", "token-class"],
+    "description": "Create a Token class for dependency injection",
+    "body": [
+      "class ${1:Name}Service extends Token(\"${1:Name}Service\") {",
+      "  declare readonly ${2:method}: (${3:arg}: ${4:ArgType}) => Thunk<${5:ReturnType}, ${6:ErrorType}>",
+      "}"
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Token.of — Provider from object
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  "Token.of": {
+    "prefix": ["thunx-token-of", "token-of"],
+    "description": "Create a Provider from a static object",
+    "body": [
+      "const ${1:name}Provider = ${2:Token}.of({",
+      "  ${3:property}: ${4:value},",
+      "})"
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Token.gen — Provider from generator
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  "Token.gen": {
+    "prefix": ["thunx-token-gen", "token-gen"],
+    "description": "Create a Provider from a generator function",
+    "body": [
+      "const ${1:name}Provider = ${2:Token}.gen(function* (signal) {",
+      "  const ${3:dep} = yield* ${4:DependencyToken}",
+      "  return {",
+      "    ${5:method}: (${6:arg}) => ${7:implementation},",
+      "  }",
+      "})"
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Thunk.try
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  "Thunk.try (simple)": {
+    "prefix": ["thunx-try", "thunk-try"],
+    "description": "Create a Thunk from an async operation",
+    "body": ["Thunk.try((signal) => ${1:fetch(url, { signal })})"]
+  },
+
+  "Thunk.try (with catch)": {
+    "prefix": ["thunx-try-catch", "thunk-try-catch"],
+    "description": "Create a Thunk with error handling",
+    "body": [
+      "Thunk.try({",
+      "  try: (signal) => ${1:fetch(url, { signal })},",
+      "  catch: (error) => new ${2:Fetch}Error({ cause: error }),",
+      "})"
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Thunk.gen
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  "Thunk.gen (simple)": {
+    "prefix": ["thunx-gen", "thunk-gen"],
+    "description": "Compose Thunks using generator syntax",
+    "body": [
+      "Thunk.gen(function* (signal) {",
+      "  const ${1:result} = yield* ${2:someThunk}",
+      "  return ${1:result}",
+      "})"
+    ]
+  },
+
+  "Thunk.gen (with service)": {
+    "prefix": ["thunx-gen-service", "thunk-gen-service"],
+    "description": "Compose Thunks with service dependency",
+    "body": [
+      "Thunk.gen(function* (signal) {",
+      "  const ${1:service} = yield* ${2:ServiceToken}",
+      "  const ${3:result} = yield* ${1:service}.${4:method}(${5:args})",
+      "  return ${3:result}",
+      "})"
+    ]
+  },
+
+  "Thunk.gen (with error)": {
+    "prefix": ["thunx-gen-error", "thunk-gen-error"],
+    "description": "Compose Thunks with conditional error",
+    "body": [
+      "Thunk.gen(function* (signal) {",
+      "  const ${1:data} = yield* ${2:fetchData}(${3:id})",
+      "  if (!${1:data}.${4:isValid}) {",
+      "    return new ${5:Validation}Error({ message: \"Invalid ${1:data}\" })",
+      "  }",
+      "  return ${1:data}",
+      "})"
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Thunk.bracket
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  "Thunk.bracket (simple)": {
+    "prefix": ["thunx-bracket", "thunk-bracket"],
+    "description": "Resource management with acquire/use/release",
+    "body": [
+      "Thunk.bracket({",
+      "  acquire: () => ${1:openConnection()},",
+      "  use: (${2:conn}) => ${2:conn}.${3:query}(${4:sql}),",
+      "  release: (${2:conn}) => ${2:conn}.close(),",
+      "})"
+    ]
+  },
+
+  "Thunk.bracket (with signal)": {
+    "prefix": ["thunx-bracket-signal", "thunk-bracket-signal"],
+    "description": "Resource management with cancellation support",
+    "body": [
+      "Thunk.bracket({",
+      "  acquire: (signal) => ${1:openConnection}({ signal }),",
+      "  use: (${2:conn}, signal) => ${2:conn}.${3:query}(${4:sql}, { signal }),",
+      "  release: (${2:conn}) => ${2:conn}.close(),",
+      "})"
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Thunk.run
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  "Thunk.run (simple)": {
+    "prefix": ["thunx-run", "thunk-run"],
+    "description": "Execute a Thunk and handle the Result",
+    "body": [
+      "const result = await Thunk.run(${1:thunk})",
+      "",
+      "if (result.ok) {",
+      "  console.log(result.value)",
+      "} else {",
+      "  console.error(result.error)",
+      "}"
+    ]
+  },
+
+  "Thunk.run (with signal)": {
+    "prefix": ["thunx-run-signal", "thunk-run-signal"],
+    "description": "Execute a Thunk with AbortSignal",
+    "body": [
+      "const controller = new AbortController()",
+      "",
+      "const result = await Thunk.run(${1:thunk}, {",
+      "  signal: controller.signal,",
+      "})",
+      "// To cancel:",
+      "// controller.abort()"
+    ]
+  },
+
+  "Thunk.run (unwrap)": {
+    "prefix": ["thunx-run-unwrap", "thunk-run-unwrap"],
+    "description": "Execute a Thunk and unwrap (throws on error)",
+    "body": ["const value = await Thunk.run(${1:thunk}, { unwrap: true })"]
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Common patterns
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  "Thunk.retry (fixed delay)": {
+    "prefix": ["thunx-retry-fixed", "thunk-retry-fixed"],
+    "description": "Thunk with fixed delay retry policy",
+    "body": ["${1:thunk}.retry({ times: ${2:3}, delay: ${3:1000} })"]
+  },
+
+  "Thunk.retry (exponential backoff)": {
+    "prefix": ["thunx-retry-exponential", "thunk-retry-exponential"],
+    "description": "Thunk with exponential backoff retry policy",
+    "body": [
+      "${1:thunk}.retry({",
+      "  times: ${2:3},",
+      "  delay: (attempt) => ${3:1000} * 2 ** attempt,",
+      "  while: (error) => error.name === \"${4:NetworkError}\",",
+      "})"
+    ]
+  },
+
+  "Thunk.timeout": {
+    "prefix": ["thunx-timeout", "thunk-timeout"],
+    "description": "Thunk with timeout",
+    "body": ["${1:thunk}.timeout(${2:5000})"]
+  },
+
+  "Thunk.span": {
+    "prefix": ["thunx-span", "thunk-span"],
+    "description": "Thunk with tracing span",
+    "body": ["${1:thunk}.span(\"${2:name}\", { ${3:key}: ${4:value} })"]
+  },
+
+  "Thunk.catch (all)": {
+    "prefix": ["thunx-catch-all", "thunk-catch-all"],
+    "description": "Handle all error types",
+    "body": ["${1:thunk}.catch((error) => ${2:null})"]
+  },
+
+  "Thunk.catch (single)": {
+    "prefix": ["thunx-catch-single", "thunk-catch-single"],
+    "description": "Handle single error type",
+    "body": ["${1:thunk}.catch(\"${2:NotFoundError}\", (error) => ${3:null})"]
+  },
+
+  "Thunk.catch (multiple)": {
+    "prefix": ["thunx-catch-multiple", "thunk-catch-multiple"],
+    "description": "Handle multiple error types",
+    "body": [
+      "${1:thunk}.catch({",
+      "  ${2:NotFoundError}: (error) => ${3:null},",
+      "  ${4:TimeoutError}: (error) => new ${5:Retry}Error({ cause: error }),",
+      "})"
+    ]
+  }
+}
